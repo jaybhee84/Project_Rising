@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+:root {
+  --deped-blue: #1A3C6E;
+  --deped-blue-light: #2352A0;
+  --deped-gold: #F5A623;
+  --deped-gold-light: #FDE68A;
+  --deped-red: #C0392B;
+  --bg-soft: #F5F7FA;
+  --text-main: #1a1a2e;
+  --text-muted: #6B7280;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--text-main);
+  background: #ffffff;
+}
+
+.deped-blue { color: var(--deped-blue); }
+.bg-deped-blue { background-color: var(--deped-blue); }
+.bg-deped-gold { background-color: var(--deped-gold); }
