@@ -4,6 +4,18 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
+interface Article {
+  id: string | number
+  title: string
+  description?: string
+  category: keyof typeof CATEGORY_STYLES | string
+  photos?: string[]
+  day?: string | number
+  month?: string
+  year?: string | number
+  created_at: string
+}
+
 const CATEGORY_STYLES = {
   'Campus Journalism': { bgColor: 'bg-amber-100 text-amber-900', borderColor: 'border-amber-200', icon: '✍️', tag: 'Journalism' },
   'Health & Nutrition': { bgColor: 'bg-emerald-100 text-emerald-900', borderColor: 'border-emerald-200', icon: '🥗', tag: 'Nutrition' },
@@ -14,7 +26,7 @@ const CATEGORY_STYLES = {
 }
 
 export default function ActivitiesPage() {
-  const [articles, setArticles] = useState([])
+  const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchArticles = async () => {
@@ -25,8 +37,8 @@ export default function ActivitiesPage() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setArticles(data || [])
-    } catch (err) {
+      setArticles((data as Article[]) || [])
+    } catch (err: any) {
       console.error('Error fetching articles:', err.message)
     } finally {
       setLoading(false)
@@ -34,23 +46,19 @@ export default function ActivitiesPage() {
   }
 
   useEffect(() => {
-    // 1. Initial fetch when page loads
     fetchArticles()
 
-    // 2. Set up real-time tracking from Supabase
     const channel = supabase
       .channel('public:news_articles')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'news_articles' },
         () => {
-          // Re-fetch automatically whenever an INSERT, UPDATE, or DELETE occurs
           fetchArticles()
         }
       )
       .subscribe()
 
-    // 3. Clean up subscription on unmount
     return () => {
       supabase.removeChannel(channel)
     }
@@ -108,7 +116,7 @@ export default function ActivitiesPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {articles.map((item) => {
-              const style = CATEGORY_STYLES[item.category] || {
+              const style = CATEGORY_STYLES[item.category as keyof typeof CATEGORY_STYLES] || {
                 bgColor: 'bg-slate-100 text-slate-800',
                 borderColor: 'border-slate-200',
                 icon: '📰',
