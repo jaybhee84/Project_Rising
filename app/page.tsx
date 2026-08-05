@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 
-// Slideshow images array with landmark.png first, followed by s1.jpg, s2.jpg, s3.jpg
 const LANDMARK_IMAGES = [
   { src: '/landmark.png', alt: 'Isabela East Central Elementary School Landmark' },
   { src: '/s1.jpg', alt: 'IECES Campus Feature 1' },
@@ -15,7 +14,6 @@ const LANDMARK_IMAGES = [
 export default function HomePage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
-  // Automatically cycle through images every 5 seconds
   useEffect(() => {
     if (LANDMARK_IMAGES.length <= 1) return
 
@@ -30,9 +28,9 @@ export default function HomePage() {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-[#5C1313] text-white py-12 lg:py-20 border-b-4 border-[#F5A623]">
+      <section className="relative overflow-hidden bg-[#5C1313] text-white py-8 sm:py-12 lg:py-20 border-b-4 border-[#F5A623]">
         
-        {/* Right Side: Landmark Slideshow with Diagonal Cut */}
+        {/* Right Side: Landmark Slideshow (Overlay on desktop, block banner on mobile) */}
         <div 
           className="absolute right-0 top-0 bottom-0 w-full lg:w-[48%] hidden lg:block z-0 pointer-events-none overflow-hidden"
           style={{
@@ -40,7 +38,6 @@ export default function HomePage() {
           }}
         >
           <div className="relative w-full h-full">
-            {/* Crossfade Slideshow Stack */}
             {LANDMARK_IMAGES.map((image, index) => (
               <div
                 key={image.src}
@@ -58,10 +55,8 @@ export default function HomePage() {
               </div>
             ))}
 
-            {/* Edge Fade Overlay Gradient */}
             <div className="absolute inset-0 bg-gradient-to-r from-[#5C1313] via-transparent to-black/30 z-10" />
 
-            {/* Slide Navigation Indicator Dots */}
             {LANDMARK_IMAGES.length > 1 && (
               <div className="absolute bottom-4 right-8 z-20 flex gap-2">
                 {LANDMARK_IMAGES.map((_, idx) => (
@@ -81,7 +76,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Far Left: Enlarged IECES Logo Watermark behind Principal */}
+        {/* Far Left Watermark Logo */}
         <div className="absolute -left-20 top-1/2 -translate-y-1/2 opacity-15 pointer-events-none hidden lg:block z-0">
           <Image 
             src="/ieceslogo.png" 
@@ -92,16 +87,15 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Full Width Grid Layout */}
-        <div className="w-full px-6 lg:px-12 relative z-10">
+        {/* Content Container */}
+        <div className="w-full px-4 sm:px-6 lg:px-12 relative z-10">
           <div className="grid lg:grid-cols-12 gap-8 items-center">
             
-            {/* Far Left: Principal Glass Card */}
-            <div className="hidden lg:flex lg:col-span-4 xl:col-span-3 justify-start">
-              <div className="p-6 rounded-3xl bg-white/5 border border-white/20 backdrop-blur-md shadow-2xl flex flex-col items-center text-center w-full max-w-xs">
+            {/* Principal Glass Card (Visible on Mobile & Desktop) */}
+            <div className="flex justify-center lg:justify-start lg:col-span-4 xl:col-span-3">
+              <div className="p-6 rounded-3xl bg-white/10 sm:bg-white/5 border border-white/20 backdrop-blur-md shadow-2xl flex flex-col items-center text-center w-full max-w-xs">
                 
-                {/* Principal Photo */}
-                <div className="relative w-48 h-48 mb-4 rounded-full overflow-hidden border-4 border-amber-400 shadow-2xl">
+                <div className="relative w-40 h-40 sm:w-48 sm:h-48 mb-4 rounded-full overflow-hidden border-4 border-amber-400 shadow-2xl">
                   <Image 
                     src="/principal.png" 
                     alt="Jocelyn R. Buenaventura, MaEd" 
@@ -111,7 +105,6 @@ export default function HomePage() {
                   />
                 </div>
 
-                {/* Name & Title */}
                 <h3 className="text-base sm:text-lg font-bold text-amber-300 leading-snug">
                   Jocelyn R. Buenaventura, MaEd
                 </h3>
@@ -121,28 +114,27 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Middle Content Section */}
-            <div className="lg:col-span-8 xl:col-span-6">
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-amber-400 leading-[1.15] drop-shadow-md">
-                Isabela East Central <br />
+            {/* Middle School Name & Call to Action Buttons */}
+            <div className="lg:col-span-8 xl:col-span-6 text-center lg:text-left">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-amber-400 leading-[1.15] drop-shadow-md">
+                Isabela East Central <br className="hidden sm:block" />
                 Elementary School
               </h1>
 
-              <p className="mt-6 text-slate-200 text-base sm:text-lg max-w-xl font-light leading-relaxed">
+              <p className="mt-4 sm:mt-6 text-slate-200 text-sm sm:text-lg max-w-xl mx-auto lg:mx-0 font-light leading-relaxed">
                 Nurturing learners with excellence, integrity, and a commitment to holistic development in service of God, community, and country.
               </p>
 
-              {/* Action Buttons */}
-              <div className="mt-8 flex flex-wrap gap-4">
+              <div className="mt-6 sm:mt-8 flex flex-wrap justify-center lg:justify-start gap-3 sm:gap-4">
                 <Link
                   href="/enrollment"
-                  className="px-6 py-3.5 rounded-lg bg-[#F5A623] hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-xl transition-all hover:scale-[1.02]"
+                  className="px-5 sm:px-6 py-3 sm:py-3.5 rounded-lg bg-[#F5A623] hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-xl transition-all hover:scale-[1.02]"
                 >
                   Enrollment Data →
                 </Link>
                 <Link
                   href="/nutritional-status"
-                  className="px-6 py-3.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-xs uppercase tracking-wider backdrop-blur-md border border-white/20 transition-all"
+                  className="px-5 sm:px-6 py-3 sm:py-3.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-xs uppercase tracking-wider backdrop-blur-md border border-white/20 transition-all"
                 >
                   Nutritional Status
                 </Link>
@@ -151,30 +143,90 @@ export default function HomePage() {
 
           </div>
         </div>
+
+        {/* Mobile Slideshow Banner (Only displays on mobile/tablet screens below 1024px) */}
+        <div className="mt-8 lg:hidden relative w-full h-56 sm:h-72 overflow-hidden border-t-2 border-amber-400/30">
+          {LANDMARK_IMAGES.map((image, index) => (
+            <div
+              key={image.src}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              <Image
+                src={image.src}
+                alt={image.alt}
+                fill
+                className="object-cover object-center brightness-90"
+              />
+            </div>
+          ))}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#5C1313] via-transparent to-transparent" />
+        </div>
+
       </section>
 
-      {/* Mission & Vision Section */}
-      <section className="w-full px-6 lg:px-12 py-20">
-        <div className="grid md:grid-cols-2 gap-10">
+      {/* Mission, Vision, & Core Values Section */}
+      <section className="w-full px-4 sm:px-6 lg:px-12 py-12 sm:py-16">
+        <div className="grid lg:grid-cols-3 gap-8 items-stretch">
           
           {/* Mission Card */}
-          <div className="p-10 bg-white rounded-3xl border border-slate-200/80 shadow-md hover:shadow-xl transition-shadow flex flex-col justify-center">
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-[#7B1C1C] mb-5 border-b-2 border-amber-400/40 pb-3">
-              Our Mission
-            </h2>
-            <p className="text-slate-700 text-base sm:text-lg leading-relaxed font-normal">
-              To protect and promote the right of every Filipino to quality, equitable, culture-based, and complete basic education where students learn in a child-friendly, gender-sensitive, safe, and motivating environment.
-            </p>
+          <div className="p-6 sm:p-8 bg-white rounded-3xl border border-slate-200/80 shadow-md hover:shadow-xl transition-shadow flex flex-col justify-between">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#7B1C1C] mb-4 border-b-2 border-amber-400/40 pb-3">
+                Our Mission
+              </h2>
+              <p className="text-slate-700 text-sm sm:text-base leading-relaxed font-normal text-justify hyphens-auto">
+                To protect and promote the right of every Filipino to quality, equitable, culture-based, and complete basic education where:
+              </p>
+              <ul className="mt-3 space-y-2 text-slate-700 text-sm leading-relaxed list-disc list-inside font-normal">
+                <li>Students learn in a child-friendly, gender-sensitive, safe, and motivating environment.</li>
+                <li>Teachers facilitate learning and constantly nurture every learner.</li>
+                <li>Administrators and staff as stewards ensure an enabling environment.</li>
+                <li>Family and stakeholders actively share responsibility for life-long learners.</li>
+              </ul>
+            </div>
           </div>
 
           {/* Vision Card */}
-          <div className="p-10 bg-white rounded-3xl border border-slate-200/80 shadow-md hover:shadow-xl transition-shadow flex flex-col justify-center">
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-[#0A192F] mb-5 border-b-2 border-amber-400/40 pb-3">
-              Our Vision
-            </h2>
-            <p className="text-slate-700 text-base sm:text-lg leading-relaxed font-normal">
-              We dream of Filipinos who passionately love their country and whose values and competencies enable them to realize their full potential and contribute meaningfully to building the nation.
-            </p>
+          <div className="p-6 sm:p-8 bg-white rounded-3xl border border-slate-200/80 shadow-md hover:shadow-xl transition-shadow flex flex-col justify-between">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#0A192F] mb-4 border-b-2 border-amber-400/40 pb-3">
+                Our Vision
+              </h2>
+              <p className="text-slate-700 text-sm sm:text-base leading-relaxed font-normal text-justify hyphens-auto">
+                We dream of Filipinos who passionately love their country and whose values and competencies enable them to realize their full potential and contribute meaningfully to building the nation.
+              </p>
+              <p className="mt-4 text-slate-700 text-sm sm:text-base leading-relaxed font-normal text-justify hyphens-auto">
+                As a learner-centered public institution, the Department of Education continuously improves itself to better serve its stakeholders.
+              </p>
+            </div>
+          </div>
+
+          {/* Core Values Card */}
+          <div className="p-6 sm:p-8 bg-white rounded-3xl border border-slate-200/80 shadow-md hover:shadow-xl transition-shadow flex flex-col justify-between">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#7B1C1C] mb-4 border-b-2 border-amber-400/40 pb-3">
+                Our Core Values
+              </h2>
+              <p className="text-slate-600 text-xs font-semibold uppercase tracking-wider mb-4">
+                DepEd National Standard
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-1 gap-3">
+                <div className="p-3.5 bg-amber-50/60 border border-amber-200/60 rounded-xl text-center font-bold text-[#7B1C1C] text-sm sm:text-base">
+                  Maka-Diyos
+                </div>
+                <div className="p-3.5 bg-amber-50/60 border border-amber-200/60 rounded-xl text-center font-bold text-[#7B1C1C] text-sm sm:text-base">
+                  Maka-Tao
+                </div>
+                <div className="p-3.5 bg-amber-50/60 border border-amber-200/60 rounded-xl text-center font-bold text-[#7B1C1C] text-sm sm:text-base">
+                  Makakalikasan
+                </div>
+                <div className="p-3.5 bg-amber-50/60 border border-amber-200/60 rounded-xl text-center font-bold text-[#7B1C1C] text-sm sm:text-base">
+                  Makabansa
+                </div>
+              </div>
+            </div>
           </div>
 
         </div>
