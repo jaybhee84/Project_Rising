@@ -20,18 +20,49 @@ export default function Navbar() {
 
   return (
     <header className="bg-[#7B1C1C] text-white shadow-xl sticky top-0 z-50 border-b-2 border-[#F5A623]/40 w-full">
+      {/* Rainbow color-cycling glow keyframes matching the exact image outline */}
+      <style jsx global>{`
+        @keyframes rainbowGlow {
+          0% {
+            filter: drop-shadow(0 0 8px #F5A623) drop-shadow(0 0 16px #F5A623);
+          }
+          20% {
+            filter: drop-shadow(0 0 8px #10B981) drop-shadow(0 0 16px #10B981);
+          }
+          40% {
+            filter: drop-shadow(0 0 8px #38BDF8) drop-shadow(0 0 16px #38BDF8);
+          }
+          60% {
+            filter: drop-shadow(0 0 8px #8B5CF6) drop-shadow(0 0 16px #8B5CF6);
+          }
+          80% {
+            filter: drop-shadow(0 0 8px #F43F5E) drop-shadow(0 0 16px #F43F5E);
+          }
+          100% {
+            filter: drop-shadow(0 0 8px #F5A623) drop-shadow(0 0 16px #F5A623);
+          }
+        }
+        .flower-rainbow-glow {
+          animation: rainbowGlow 5s infinite ease-in-out;
+        }
+      `}</style>
+
       <div className="w-full px-4 sm:px-6 lg:px-12 flex items-center justify-between h-20 sm:h-24">
         
         {/* Logo & School Title */}
         <Link href="/" className="flex items-center gap-3 sm:gap-4 group transition-all">
-          <div className="relative w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 drop-shadow-md group-hover:scale-105 transition-transform">
-            <Image 
-              src="/ieceslogo.png" 
-              alt="IECES Seal" 
-              fill 
-              className="object-contain" 
-              priority 
-            />
+          
+          {/* Logo with Rainbow Edge Glow */}
+          <div className="relative w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 group-hover:scale-105 transition-transform">
+            <div className="relative w-full h-full flower-rainbow-glow">
+              <Image 
+                src="/ieceslogo.png" 
+                alt="IECES Seal" 
+                fill 
+                className="object-contain" 
+                priority 
+              />
+            </div>
           </div>
 
           <div className="flex flex-col">

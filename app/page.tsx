@@ -28,13 +28,13 @@ export default function HomePage() {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-[#5C1313] text-white py-8 sm:py-12 lg:py-20 border-b-4 border-[#F5A623]">
+      <section className="relative overflow-hidden bg-[#5C1313] text-white py-8 sm:py-12 lg:py-16 border-b-4 border-[#F5A623]">
         
-        {/* Right Side: Landmark Slideshow (Overlay on desktop, block banner on mobile) */}
+        {/* Right Side: Landmark Slideshow */}
         <div 
           className="absolute right-0 top-0 bottom-0 w-full lg:w-[48%] hidden lg:block z-0 pointer-events-none overflow-hidden"
           style={{
-            clipPath: 'polygon(15% 0, 100% 0, 100% 100%, 0% 100%)',
+            clipPath: 'polygon(12% 0, 100% 0, 100% 100%, 0% 100%)',
           }}
         >
           <div className="relative w-full h-full">
@@ -87,15 +87,14 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Content Container */}
+        {/* Hero Main Content Container */}
         <div className="w-full px-4 sm:px-6 lg:px-12 relative z-10">
-          <div className="grid lg:grid-cols-12 gap-8 items-center">
+          <div className="flex flex-col lg:flex-row items-center lg:items-start gap-4 lg:gap-6 max-w-full">
             
-            {/* Principal Glass Card (Visible on Mobile & Desktop) */}
-            <div className="flex justify-center lg:justify-start lg:col-span-4 xl:col-span-3">
-              <div className="p-6 rounded-3xl bg-white/10 sm:bg-white/5 border border-white/20 backdrop-blur-md shadow-2xl flex flex-col items-center text-center w-full max-w-xs">
-                
-                <div className="relative w-40 h-40 sm:w-48 sm:h-48 mb-4 rounded-full overflow-hidden border-4 border-amber-400 shadow-2xl">
+            {/* Principal Glass Card */}
+            <div className="flex-shrink-0 w-full sm:w-72 lg:w-64">
+              <div className="p-5 rounded-2xl bg-white/10 sm:bg-white/5 border border-white/20 backdrop-blur-md shadow-2xl flex flex-col items-center text-center w-full">
+                <div className="relative w-36 h-36 sm:w-44 sm:h-44 mb-3 rounded-full overflow-hidden border-4 border-amber-400 shadow-xl">
                   <Image 
                     src="/principal.png" 
                     alt="Jocelyn R. Buenaventura, MaEd" 
@@ -105,36 +104,35 @@ export default function HomePage() {
                   />
                 </div>
 
-                <h3 className="text-base sm:text-lg font-bold text-amber-300 leading-snug">
+                <h3 className="text-sm sm:text-base font-bold text-amber-300 leading-snug">
                   Jocelyn R. Buenaventura, MaEd
                 </h3>
-                <span className="text-[11px] text-slate-200 mt-1 font-semibold tracking-wider uppercase">
+                <span className="text-[10px] sm:text-[11px] text-slate-200 mt-0.5 font-semibold tracking-wider uppercase">
                   Principal I
                 </span>
               </div>
             </div>
 
-            {/* Middle School Name & Call to Action Buttons */}
-            <div className="lg:col-span-8 xl:col-span-6 text-center lg:text-left">
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-amber-400 leading-[1.15] drop-shadow-md">
-                Isabela East Central <br className="hidden sm:block" />
-                Elementary School
+            {/* School Name & Mission Text Block (Shifted Left & Single-Line Heading) */}
+            <div className="flex-1 text-center lg:text-left min-w-0">
+              <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-[2.25rem] xl:text-[2.65rem] font-serif font-bold tracking-tight text-amber-400 leading-none whitespace-nowrap drop-shadow-md">
+                Isabela East Central Elementary School
               </h1>
 
-              <p className="mt-4 sm:mt-6 text-slate-200 text-sm sm:text-lg max-w-xl mx-auto lg:mx-0 font-light leading-relaxed">
+              <p className="mt-3 text-slate-200 text-xs sm:text-sm lg:text-base font-light leading-relaxed max-w-xl mx-auto lg:mx-0 text-justify">
                 Nurturing learners with excellence, integrity, and a commitment to holistic development in service of God, community, and country.
               </p>
 
-              <div className="mt-6 sm:mt-8 flex flex-wrap justify-center lg:justify-start gap-3 sm:gap-4">
+              <div className="mt-5 flex flex-wrap justify-center lg:justify-start gap-3">
                 <Link
                   href="/enrollment"
-                  className="px-5 sm:px-6 py-3 sm:py-3.5 rounded-lg bg-[#F5A623] hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-xl transition-all hover:scale-[1.02]"
+                  className="px-5 py-2.5 sm:py-3 rounded-lg bg-[#F5A623] hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-xl transition-all hover:scale-[1.02]"
                 >
                   Enrollment Data →
                 </Link>
                 <Link
                   href="/nutritional-status"
-                  className="px-5 sm:px-6 py-3 sm:py-3.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-xs uppercase tracking-wider backdrop-blur-md border border-white/20 transition-all"
+                  className="px-5 py-2.5 sm:py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-xs uppercase tracking-wider backdrop-blur-md border border-white/20 transition-all"
                 >
                   Nutritional Status
                 </Link>
@@ -144,7 +142,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Mobile Slideshow Banner (Only displays on mobile/tablet screens below 1024px) */}
+        {/* Mobile Slideshow Banner (Below 1024px) */}
         <div className="mt-8 lg:hidden relative w-full h-56 sm:h-72 overflow-hidden border-t-2 border-amber-400/30">
           {LANDMARK_IMAGES.map((image, index) => (
             <div
