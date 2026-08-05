@@ -17,12 +17,12 @@ export default function Navbar() {
   const [open, setOpen] = useState(false)
 
   return (
-    <nav style={{ backgroundColor: 'var(--deped-blue)' }} className="sticky top-0 z-50 shadow-lg">
+    <nav style={{ backgroundColor: 'var(--school-maroon)' }} className="sticky top-0 z-50 shadow-lg">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo / School name */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div style={{ backgroundColor: 'var(--deped-gold)' }}
+            <div style={{ backgroundColor: 'var(--school-gold)' }}
               className="w-9 h-9 rounded-full flex items-center justify-center font-black text-white text-sm flex-shrink-0">
               IE
             </div>
@@ -41,9 +41,9 @@ export default function Navbar() {
                 className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
                   pathname === link.href
                     ? 'text-white'
-                    : 'text-blue-200 hover:text-white hover:bg-white/10'
+                    : 'text-red-200 hover:text-white hover:bg-white/10'
                 }`}
-                style={pathname === link.href ? { backgroundColor: 'var(--deped-gold)', color: '#1a1a2e' } : {}}
+                style={pathname === link.href ? { backgroundColor: 'var(--school-gold)', color: '#1a1a2e' } : {}}
               >
                 {link.label}
               </Link>
@@ -73,9 +73,9 @@ export default function Navbar() {
                 className={`block px-3 py-2 rounded text-sm font-medium mb-1 ${
                   pathname === link.href
                     ? 'text-yellow-900'
-                    : 'text-blue-100 hover:text-white hover:bg-white/10'
+                    : 'text-red-100 hover:text-white hover:bg-white/10'
                 }`}
-                style={pathname === link.href ? { backgroundColor: 'var(--deped-gold)' } : {}}
+                style={pathname === link.href ? { backgroundColor: 'var(--school-gold)' } : {}}
               >
                 {link.label}
               </Link>

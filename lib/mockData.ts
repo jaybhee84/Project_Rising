@@ -32,7 +32,7 @@ export const nsColors: Record<NSCategory, string> = {
   SW: '#C0392B',
   W:  '#E67E22',
   N:  '#27AE60',
-  OW: '#2980B9',
+  OW: '#0891B2',
   O:  '#8E44AD',
 }
 

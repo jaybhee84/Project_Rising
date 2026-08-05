@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --deped-blue: #1A3C6E;
-  --deped-blue-light: #2352A0;
-  --deped-gold: #F5A623;
-  --deped-gold-light: #FDE68A;
-  --deped-red: #C0392B;
-  --bg-soft: #F5F7FA;
-  --text-main: #1a1a2e;
+  --school-maroon: #7B1C1C;
+  --school-maroon-dark: #5C1010;
+  --school-maroon-light: #9B2C2C;
+  --school-gold: #F5A623;
+  --school-gold-light: #FDE68A;
+  --bg-soft: #FDF8F8;
+  --text-main: #1a1a1a;
   --text-muted: #6B7280;
 }
 
@@ -20,7 +20,3 @@ body {
   color: var(--text-main);
   background: #ffffff;
 }
-
-.deped-blue { color: var(--deped-blue); }
-.bg-deped-blue { background-color: var(--deped-blue); }
-.bg-deped-gold { background-color: var(--deped-gold); }

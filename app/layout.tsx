@@ -5,7 +5,7 @@ import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
   title: 'Isabela East Central Elementary School',
-  description: 'Official website of IECES — SDO Isabela City, Basilan, BARMM',
+  description: 'Official website of IECES — SDO Isabela City, Basilan',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
