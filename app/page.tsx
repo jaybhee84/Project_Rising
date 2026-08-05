@@ -97,15 +97,15 @@ export default function HomePage() {
                 <div className="relative w-36 h-36 sm:w-44 sm:h-44 mb-3 rounded-full overflow-hidden border-4 border-amber-400 shadow-xl">
                   <Image 
                     src="/principal.png" 
-                    alt="Jocelyn R. Buenaventura, MaEd" 
+                    alt="Jocelyn R. Buenaventura, EdD" 
                     fill
                     className="object-cover object-top"
                     priority
                   />
                 </div>
 
-                <h3 className="text-sm sm:text-base font-bold text-amber-300 leading-snug">
-                  Jocelyn R. Buenaventura, MaEd
+                <h3 className="text-xs sm:text-sm lg:text-base font-bold text-amber-300 leading-snug whitespace-nowrap">
+                  Jocelyn R. Buenaventura, Ed.D.
                 </h3>
                 <span className="text-[10px] sm:text-[11px] text-slate-200 mt-0.5 font-semibold tracking-wider uppercase">
                   Principal I
