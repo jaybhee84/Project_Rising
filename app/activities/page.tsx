@@ -29,18 +29,30 @@ export default function ActivitiesPage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const fetchArticles = async () => {
     try {
+      setLoading(true)
+      setErrorMessage(null)
+
       const { data, error } = await supabase
         .from('news_articles')
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase Query Error:', error)
+        setErrorMessage(error.message)
+        throw error
+      }
+
+      console.log('Successfully fetched articles from Supabase:', data)
       setArticles((data as Article[]) || [])
-    } catch (err: any) {
-      console.error('Error fetching articles:', err.message)
+    } catch (err: unknown) {
+      const errorObj = err as Error
+      console.error('Error in fetchArticles:', errorObj)
+      setErrorMessage(errorObj.message || 'Failed to fetch articles')
     } finally {
       setLoading(false)
     }
@@ -54,7 +66,8 @@ export default function ActivitiesPage() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'news_articles' },
-        () => {
+        (payload: Record<string, unknown>) => {
+          console.log('Realtime payload received:', payload)
           fetchArticles()
         }
       )
@@ -72,6 +85,7 @@ export default function ActivitiesPage() {
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
+        
         {/* Hero Banner */}
         <div
           style={{
@@ -123,7 +137,7 @@ export default function ActivitiesPage() {
             {CATEGORIES.map((cat) => {
               const isSelected = selectedCategory === cat.name
               const count = articles.filter((a) => a.category === cat.name).length
-              
+
               return (
                 <button
                   key={cat.name}
@@ -136,7 +150,11 @@ export default function ActivitiesPage() {
                       : 'bg-white border-slate-200/80 hover:border-rose-300 hover:bg-rose-50/30 text-slate-800 shadow-sm'
                   }`}
                 >
-                  <span className={`text-3xl p-3 rounded-xl ${isSelected ? 'bg-white/10' : 'bg-slate-100/80'}`}>
+                  <span
+                    className={`text-3xl p-3 rounded-xl ${
+                      isSelected ? 'bg-white/10' : 'bg-slate-100/80'
+                    }`}
+                  >
                     {cat.icon}
                   </span>
                   <div className="flex flex-col">
@@ -170,8 +188,22 @@ export default function ActivitiesPage() {
               {selectedCategory ? selectedCategory : 'Recent School Highlights'}
             </h2>
           </div>
-      
+          <p className="text-slate-500 text-xs sm:text-sm mt-2 md:mt-0">
+            Showcasing academic, cultural, and sports achievements across all
+            grade levels.
+          </p>
         </div>
+
+        {/* Error State Notice */}
+        {errorMessage && (
+          <div className="p-4 mb-8 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">
+            <p className="font-bold">Database Error:</p>
+            <p>{errorMessage}</p>
+            <p className="text-xs mt-2 text-red-600">
+              Please check your Supabase Row Level Security (RLS) policies or Vercel Environment Variables.
+            </p>
+          </div>
+        )}
 
         {/* Content View */}
         {loading ? (
@@ -197,7 +229,7 @@ export default function ActivitiesPage() {
 
               const coverImage =
                 item.photos && item.photos.length > 0 ? item.photos[0] : null
-              
+
               const dateString =
                 item.day && item.month && item.year
                   ? `${item.day} ${item.month} ${item.year}`
