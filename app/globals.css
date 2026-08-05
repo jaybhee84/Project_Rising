@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --school-maroon: #7B1C1C;
-  --school-maroon-dark: #5C1010;
-  --school-maroon-light: #9B2C2C;
-  --school-gold: #F5A623;
-  --school-gold-light: #FDE68A;
-  --bg-soft: #FDF8F8;
-  --text-main: #1a1a1a;
-  --text-muted: #6B7280;
+  --deped-blue: #0A2540;
+  --deped-blue-accent: #0052CC;
+  --deped-blue-light: #1E40AF;
+  --school-gold: #F59E0B;
+  --school-maroon: #881337;
+  --bg-main: #F8FAFC;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
 }
 
 * {
@@ -16,7 +16,8 @@
 }
 
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   color: var(--text-main);
-  background: #ffffff;
+  background-color: var(--bg-main);
+  -webkit-font-smoothing: antialiased;
 }

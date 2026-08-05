@@ -1,88 +1,71 @@
 'use client'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useState } from 'react'
 
-const navLinks = [
-  { href: '/',                    label: 'Home' },
-  { href: '/nutritional-status',  label: 'Nutritional Status' },
-  { href: '/enrollment',          label: 'Enrollment' },
-  { href: '/org-chart',           label: 'Directory' },
-  { href: '/mooe',                label: 'MOOE' },
-  { href: '/teachers',            label: 'Teachers' },
-]
+import Link from 'next/link'
+import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 
 export default function Navbar() {
   const pathname = usePathname()
-  const [open, setOpen] = useState(false)
+
+  const navLinks = [
+    { name: 'Home', href: '/' },
+    { name: 'Activities', href: '/activities' },
+    { name: 'Enrollment', href: '/enrollment' },
+    { name: 'Nutritional Status', href: '/nutritional-status' },
+    { name: 'MOOE', href: '/mooe' },
+    { name: 'Org Chart', href: '/org-chart' },
+  ]
 
   return (
-    <nav style={{ backgroundColor: 'var(--school-maroon)' }} className="sticky top-0 z-50 shadow-lg">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo / School name */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <div style={{ backgroundColor: 'var(--school-gold)' }}
-              className="w-9 h-9 rounded-full flex items-center justify-center font-black text-white text-sm flex-shrink-0">
-              IE
-            </div>
-            <span className="text-white font-bold text-sm leading-tight hidden sm:block">
-              Isabela East Central<br />
-              <span className="font-normal text-xs opacity-80">Elementary School</span>
+    <header className="bg-[#7B1C1C] text-white shadow-xl sticky top-0 z-50 border-b-2 border-[#F5A623]/40 w-full">
+      {/* Full-width container across the screen */}
+      <div className="w-full px-6 lg:px-12 flex items-center justify-between h-20 sm:h-24">
+        
+        {/* Far Left: Logo & School Name */}
+        <Link href="/" className="flex items-center gap-3 sm:gap-4 group transition-all">
+          <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 drop-shadow-md group-hover:scale-105 transition-transform">
+            <Image 
+              src="/ieceslogo.png" 
+              alt="IECES Seal" 
+              fill 
+              className="object-contain" 
+              priority 
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <span className="font-serif font-bold text-base sm:text-xl tracking-normal text-white group-hover:text-amber-200 transition-colors leading-tight">
+              Isabela East Central Elementary School
             </span>
-          </Link>
-
-          {/* Desktop links */}
-          <div className="hidden md:flex items-center gap-1">
-            {navLinks.map(link => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
-                  pathname === link.href
-                    ? 'text-white'
-                    : 'text-red-200 hover:text-white hover:bg-white/10'
-                }`}
-                style={pathname === link.href ? { backgroundColor: 'var(--school-gold)', color: '#1a1a2e' } : {}}
-              >
-                {link.label}
-              </Link>
-            ))}
+            <div className="flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] font-semibold tracking-widest text-amber-300 uppercase mt-0.5">
+              <span>East District I</span>
+              <span className="text-amber-400/50">•</span>
+              <span>Division of Isabela City, Basilan</span>
+            </div>
           </div>
+        </Link>
 
-          {/* Mobile hamburger */}
-          <button
-            className="md:hidden text-white p-2"
-            onClick={() => setOpen(!open)}
-            aria-label="Toggle menu"
-          >
-            <div className={`w-5 h-0.5 bg-white mb-1 transition-all ${open ? 'rotate-45 translate-y-1.5' : ''}`} />
-            <div className={`w-5 h-0.5 bg-white mb-1 transition-all ${open ? 'opacity-0' : ''}`} />
-            <div className={`w-5 h-0.5 bg-white transition-all ${open ? '-rotate-45 -translate-y-1.5' : ''}`} />
-          </button>
-        </div>
-
-        {/* Mobile menu */}
-        {open && (
-          <div className="md:hidden pb-3 border-t border-white/20 pt-2">
-            {navLinks.map(link => (
+        {/* Far Right: Nav Menu Links */}
+        <nav className="hidden lg:flex items-center space-x-2 text-xs font-bold uppercase tracking-wider">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href
+            return (
               <Link
-                key={link.href}
+                key={link.name}
                 href={link.href}
-                onClick={() => setOpen(false)}
-                className={`block px-3 py-2 rounded text-sm font-medium mb-1 ${
-                  pathname === link.href
-                    ? 'text-yellow-900'
-                    : 'text-red-100 hover:text-white hover:bg-white/10'
+                className={`px-4 py-2 rounded-lg transition-all ${
+                  isActive
+                    ? 'bg-amber-400 text-slate-950 font-black shadow-md'
+                    : 'text-slate-100 hover:bg-white/10 hover:text-amber-300'
                 }`}
-                style={pathname === link.href ? { backgroundColor: 'var(--school-gold)' } : {}}
               >
-                {link.label}
+                {link.name}
               </Link>
-            ))}
-          </div>
-        )}
+            )
+          })}
+        </nav>
+
       </div>
-    </nav>
+    </header>
   )
 }

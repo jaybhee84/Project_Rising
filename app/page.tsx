@@ -1,169 +1,182 @@
-import Link from 'next/link'
+'use client'
 
-const modules = [
-  {
-    href: '/nutritional-status',
-    icon: '🥗',
-    title: 'Nutritional Status',
-    desc: 'View aggregated BMI and nutritional status data per grade level. Includes SBFP feeding program coverage.',
-    color: '#27AE60',
-  },
-  {
-    href: '/enrollment',
-    icon: '📋',
-    title: 'Enrollment',
-    desc: 'Current enrollment data by grade level and school year.',
-    color: '#2980B9',
-  },
-  {
-    href: '/org-chart',
-    icon: '👥',
-    title: 'Directory & Org Chart',
-    desc: 'School organizational structure, administration, and teaching staff directory.',
-    color: '#8E44AD',
-  },
-  {
-    href: '/mooe',
-    icon: '📊',
-    title: 'MOOE Expenses',
-    desc: 'Maintenance and Other Operating Expenses — liquidation reports and budget utilization.',
-    color: '#E67E22',
-  },
-  {
-    href: '/teachers',
-    icon: '🎓',
-    title: 'Teachers App',
-    desc: 'Teacher portal for viewing class nutritional status and generating learner school IDs.',
-    color: '#C0392B',
-  },
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+
+// Slideshow images array with landmark.png first, followed by s1.jpg, s2.jpg, s3.jpg
+const LANDMARK_IMAGES = [
+  { src: '/landmark.png', alt: 'Isabela East Central Elementary School Landmark' },
+  { src: '/s1.jpg', alt: 'IECES Campus Feature 1' },
+  { src: '/s2.jpg', alt: 'IECES Campus Feature 2' },
+  { src: '/s3.jpg', alt: 'IECES Campus Feature 3' },
 ]
 
 export default function HomePage() {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+
+  // Automatically cycle through images every 5 seconds
+  useEffect(() => {
+    if (LANDMARK_IMAGES.length <= 1) return
+
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % LANDMARK_IMAGES.length)
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [])
+
   return (
-    <div>
-      {/* Hero */}
-      <section
-        style={{ background: 'linear-gradient(135deg, var(--deped-blue) 0%, #2352A0 60%, #1a5276 100%)' }}
-        className="relative overflow-hidden"
-      >
-        {/* Decorative sun watermark */}
-        <div
-          className="absolute right-0 top-0 w-96 h-96 opacity-5"
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-[#5C1313] text-white py-12 lg:py-20 border-b-4 border-[#F5A623]">
+        
+        {/* Right Side: Landmark Slideshow with Diagonal Cut */}
+        <div 
+          className="absolute right-0 top-0 bottom-0 w-full lg:w-[48%] hidden lg:block z-0 pointer-events-none overflow-hidden"
           style={{
-            backgroundImage: `radial-gradient(circle, white 2px, transparent 2px)`,
-            backgroundSize: '20px 20px',
-            borderRadius: '50%',
-            transform: 'translate(30%, -30%)',
+            clipPath: 'polygon(15% 0, 100% 0, 100% 100%, 0% 100%)',
           }}
-        />
-
-        <div className="max-w-6xl mx-auto px-4 py-20 relative z-10">
-          <div className="max-w-3xl">
-            <div
-              className="inline-block text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4"
-              style={{ backgroundColor: 'var(--deped-gold)', color: '#1a1a2e' }}
-            >
-              SDO Isabela City · Basilan · BARMM
-            </div>
-            <h1 className="text-3xl md:text-5xl font-black text-white leading-tight mb-4">
-              Isabela East Central<br />
-              <span style={{ color: 'var(--deped-gold)' }}>Elementary School</span>
-            </h1>
-            <p className="text-blue-200 text-lg leading-relaxed mb-8 max-w-xl">
-              Nurturing learners with excellence, integrity, and a commitment to holistic development
-              in service of God, community, and country.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/nutritional-status"
-                className="px-5 py-2.5 rounded-lg font-semibold text-sm transition-all hover:opacity-90"
-                style={{ backgroundColor: 'var(--deped-gold)', color: '#1a1a2e' }}
-              >
-                View Nutritional Status →
-              </Link>
-              <Link
-                href="/enrollment"
-                className="px-5 py-2.5 rounded-lg font-semibold text-sm border border-white/30 text-white hover:bg-white/10 transition-all"
-              >
-                Enrollment Data
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Mission & Vision */}
-      <section style={{ backgroundColor: 'var(--bg-soft)' }} className="py-14">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
+        >
+          <div className="relative w-full h-full">
+            {/* Crossfade Slideshow Stack */}
+            {LANDMARK_IMAGES.map((image, index) => (
               <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm mb-4"
-                style={{ backgroundColor: 'var(--deped-blue)' }}
+                key={image.src}
+                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                  index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                }`}
               >
-                M
+                <Image
+                  src={image.src}
+                  alt={image.alt}
+                  fill
+                  className="object-cover object-center brightness-90"
+                  priority={index === 0}
+                />
               </div>
-              <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--deped-blue)' }}>Mission</h2>
-              <p className="text-gray-600 leading-relaxed text-sm">
-                To protect and promote the right of every Filipino to quality, equitable, culture-based,
-                and complete basic education where students learn in a child-friendly, gender-sensitive,
-                safe, and motivating environment.
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
-              <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm mb-4"
-                style={{ backgroundColor: 'var(--deped-gold)', color: '#1a1a2e' }}
-              >
-                V
-              </div>
-              <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--deped-blue)' }}>Vision</h2>
-              <p className="text-gray-600 leading-relaxed text-sm">
-                We dream of Filipinos who passionately love their country and whose values and competencies
-                enable them to realize their full potential and contribute meaningfully to building the nation.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Modules */}
-      <section className="py-14">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="mb-10">
-            <h2 className="text-2xl font-black" style={{ color: 'var(--deped-blue)' }}>
-              School Information Portal
-            </h2>
-            <p className="text-gray-500 text-sm mt-1">
-              Transparent data and resources for the IECES community
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {modules.map(mod => (
-              <Link
-                key={mod.href}
-                href={mod.href}
-                className="group bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5"
-              >
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4"
-                  style={{ backgroundColor: mod.color + '15' }}
-                >
-                  {mod.icon}
-                </div>
-                <h3 className="font-bold text-base mb-2 group-hover:text-blue-700 transition-colors">
-                  {mod.title}
-                </h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{mod.desc}</p>
-                <div
-                  className="mt-4 text-xs font-semibold"
-                  style={{ color: mod.color }}
-                >
-                  View →
-                </div>
-              </Link>
             ))}
+
+            {/* Edge Fade Overlay Gradient */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#5C1313] via-transparent to-black/30 z-10" />
+
+            {/* Slide Navigation Indicator Dots */}
+            {LANDMARK_IMAGES.length > 1 && (
+              <div className="absolute bottom-4 right-8 z-20 flex gap-2">
+                {LANDMARK_IMAGES.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentImageIndex(idx)}
+                    className={`w-2.5 h-2.5 rounded-full transition-all pointer-events-auto ${
+                      idx === currentImageIndex 
+                        ? 'bg-amber-400 w-6' 
+                        : 'bg-white/50 hover:bg-white'
+                    }`}
+                    aria-label={`Go to slide ${idx + 1}`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Far Left: Enlarged IECES Logo Watermark behind Principal */}
+        <div className="absolute -left-20 top-1/2 -translate-y-1/2 opacity-15 pointer-events-none hidden lg:block z-0">
+          <Image 
+            src="/ieceslogo.png" 
+            alt="" 
+            width={700} 
+            height={700} 
+            priority 
+          />
+        </div>
+
+        {/* Full Width Grid Layout */}
+        <div className="w-full px-6 lg:px-12 relative z-10">
+          <div className="grid lg:grid-cols-12 gap-8 items-center">
+            
+            {/* Far Left: Principal Glass Card */}
+            <div className="hidden lg:flex lg:col-span-4 xl:col-span-3 justify-start">
+              <div className="p-6 rounded-3xl bg-white/5 border border-white/20 backdrop-blur-md shadow-2xl flex flex-col items-center text-center w-full max-w-xs">
+                
+                {/* Principal Photo */}
+                <div className="relative w-48 h-48 mb-4 rounded-full overflow-hidden border-4 border-amber-400 shadow-2xl">
+                  <Image 
+                    src="/principal.png" 
+                    alt="Jocelyn R. Buenaventura, MaEd" 
+                    fill
+                    className="object-cover object-top"
+                    priority
+                  />
+                </div>
+
+                {/* Name & Title */}
+                <h3 className="text-base sm:text-lg font-bold text-amber-300 leading-snug">
+                  Jocelyn R. Buenaventura, MaEd
+                </h3>
+                <span className="text-[11px] text-slate-200 mt-1 font-semibold tracking-wider uppercase">
+                  Principal I
+                </span>
+              </div>
+            </div>
+
+            {/* Middle Content Section */}
+            <div className="lg:col-span-8 xl:col-span-6">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-amber-400 leading-[1.15] drop-shadow-md">
+                Isabela East Central <br />
+                Elementary School
+              </h1>
+
+              <p className="mt-6 text-slate-200 text-base sm:text-lg max-w-xl font-light leading-relaxed">
+                Nurturing learners with excellence, integrity, and a commitment to holistic development in service of God, community, and country.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="mt-8 flex flex-wrap gap-4">
+                <Link
+                  href="/enrollment"
+                  className="px-6 py-3.5 rounded-lg bg-[#F5A623] hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-xl transition-all hover:scale-[1.02]"
+                >
+                  Enrollment Data →
+                </Link>
+                <Link
+                  href="/nutritional-status"
+                  className="px-6 py-3.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-xs uppercase tracking-wider backdrop-blur-md border border-white/20 transition-all"
+                >
+                  Nutritional Status
+                </Link>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* Mission & Vision Section */}
+      <section className="w-full px-6 lg:px-12 py-20">
+        <div className="grid md:grid-cols-2 gap-10">
+          
+          {/* Mission Card */}
+          <div className="p-10 bg-white rounded-3xl border border-slate-200/80 shadow-md hover:shadow-xl transition-shadow flex flex-col justify-center">
+            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-[#7B1C1C] mb-5 border-b-2 border-amber-400/40 pb-3">
+              Our Mission
+            </h2>
+            <p className="text-slate-700 text-base sm:text-lg leading-relaxed font-normal">
+              To protect and promote the right of every Filipino to quality, equitable, culture-based, and complete basic education where students learn in a child-friendly, gender-sensitive, safe, and motivating environment.
+            </p>
+          </div>
+
+          {/* Vision Card */}
+          <div className="p-10 bg-white rounded-3xl border border-slate-200/80 shadow-md hover:shadow-xl transition-shadow flex flex-col justify-center">
+            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-[#0A192F] mb-5 border-b-2 border-amber-400/40 pb-3">
+              Our Vision
+            </h2>
+            <p className="text-slate-700 text-base sm:text-lg leading-relaxed font-normal">
+              We dream of Filipinos who passionately love their country and whose values and competencies enable them to realize their full potential and contribute meaningfully to building the nation.
+            </p>
+          </div>
+
         </div>
       </section>
     </div>
