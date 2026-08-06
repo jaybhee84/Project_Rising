@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 
 interface Article {
@@ -25,17 +26,31 @@ const CATEGORIES = [
   { name: 'Safety & Preparedness', icon: '🚨', tag: 'Safety Drive', bgColor: 'bg-amber-100 text-amber-900', borderColor: 'border-amber-200' },
 ]
 
+const HERO_IMAGES = ['/media.png', '/media2.png']
+
 export default function ActivitiesPage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+  // Banner slideshow state
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0)
+
   // Track active slide index for each article using its ID as the key
   const [activeImageIndices, setActiveImageIndices] = useState<Record<string | number, number>>({})
 
   // Track image URL for full-screen modal
   const [modalImage, setModalImage] = useState<string | null>(null)
+
+  // ── Slideshow Timer (Cycles hero image every 3 seconds) ──
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentHeroIndex((prev) => (prev + 1) % HERO_IMAGES.length)
+    }, 3000)
+
+    return () => clearInterval(timer)
+  }, [])
 
   const fetchArticles = async () => {
     try {
@@ -108,15 +123,15 @@ export default function ActivitiesPage() {
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         
-        {/* Hero Banner */}
+        {/* Hero Banner with Image Slideshow */}
         <div
           style={{
             background:
               'linear-gradient(135deg, #7B1C1C 0%, #881337 50%, #4C0D15 100%)',
           }}
-          className="rounded-3xl p-8 sm:p-12 text-white shadow-xl mb-12 relative overflow-hidden"
+          className="rounded-3xl p-8 sm:p-12 text-white shadow-xl mb-12 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8"
         >
-          <div className="relative z-10 max-w-3xl">
+          <div className="relative z-10 max-w-2xl flex-1">
             <div
               style={{
                 backgroundColor: 'var(--school-gold, #F59E0B)',
@@ -136,6 +151,27 @@ export default function ActivitiesPage() {
               sports meets, and community engagement projects at Isabela East
               Central Elementary School.
             </p>
+          </div>
+
+          {/* Banner Slideshow Container */}
+          <div className="flex-shrink-0 flex justify-center items-center relative w-64 sm:w-80 md:w-[380px] lg:w-[420px] h-[260px] sm:h-[300px] md:h-[340px]">
+            {HERO_IMAGES.map((src, index) => (
+              <div
+                key={src}
+                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out flex justify-center items-center ${
+                  index === currentHeroIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                }`}
+              >
+                <Image
+                  src={src}
+                  alt={`Campus Highlight Slide ${index + 1}`}
+                  width={600}
+                  height={600}
+                  className="w-full h-full object-contain drop-shadow-xl"
+                  priority={index === 0}
+                />
+              </div>
+            ))}
           </div>
         </div>
 

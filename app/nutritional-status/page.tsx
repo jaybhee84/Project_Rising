@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import {
   fetchNutritionalData,
   nsColors, nsLabels,
@@ -22,6 +23,8 @@ const EMPTY_TOTALS: Totals = {
   SS: 0, HS: 0, HN: 0, HT: 0,
 }
 const EMPTY_META: Meta = { schoolYear: '', quarter: '', feedingProgram: FEEDING_PROGRAM, schoolName: '' }
+
+const BANNER_IMAGES = ['/nsimage.png', '/nsimage2.png']
 
 function SelectPill({
   label, value, options, onChange,
@@ -55,8 +58,18 @@ export default function NutritionalStatusPage() {
   const [rows, setRows] = useState<GradeLevelData[]>([])
   const [totals, setTotals] = useState<Totals>(EMPTY_TOTALS)
   const [meta, setMeta] = useState<Meta>(EMPTY_META)
+  const [currentImgIndex, setCurrentImgIndex] = useState(0)
 
   useEffect(() => { setIsMounted(true) }, [])
+
+  // ── Slideshow Timer (Swaps image every 3 seconds) ──
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentImgIndex((prevIdx) => (prevIdx + 1) % BANNER_IMAGES.length)
+    }, 3000)
+
+    return () => clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     setLoading(true)
@@ -110,33 +123,56 @@ export default function NutritionalStatusPage() {
       {/* Hero Banner */}
       <section
         style={{ background: 'linear-gradient(135deg, #7B1C1C 0%, #881337 50%, #4C0D15 100%)' }}
-        className="text-white py-12 px-4 sm:px-6 lg:px-8 shadow-md"
+        className="text-white py-12 px-4 sm:px-6 lg:px-8 shadow-md overflow-hidden"
       >
-        <div className="max-w-6xl mx-auto">
-          <div
-            style={{ backgroundColor: '#F59E0B', color: '#0A192F' }}
-            className="inline-block text-xs font-black uppercase tracking-wider px-3.5 py-1 rounded-full mb-4 shadow-sm"
-          >
-            SDO Isabela City · Basilan · BARMM
-          </div>
-          <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-tight mb-4">
-            Nutritional Status Report
-          </h1>
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex-1">
+            <div
+              style={{ backgroundColor: '#F59E0B', color: '#0A192F' }}
+              className="inline-block text-xs font-black uppercase tracking-wider px-3.5 py-1 rounded-full mb-4 shadow-sm"
+            >
+              SDO Isabela City · Basilan · BARMM
+            </div>
+            <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-tight mb-4">
+              Nutritional Status Report
+            </h1>
 
-          {/* Dropdowns */}
-          <div className="flex flex-wrap gap-4 mb-4">
-            <SelectPill label="School Year" value={schoolYear} options={SCHOOL_YEARS} onChange={setSchoolYear} />
-            <SelectPill label="Period" value={quarter} options={QUARTERS} onChange={setQuarter} />
+            {/* Dropdowns */}
+            <div className="flex flex-wrap gap-4 mb-4">
+              <SelectPill label="School Year" value={schoolYear} options={SCHOOL_YEARS} onChange={setSchoolYear} />
+              <SelectPill label="Period" value={quarter} options={QUARTERS} onChange={setQuarter} />
+            </div>
+
+            <p className="text-rose-100 text-sm opacity-80">
+              {FEEDING_PROGRAM} · {meta.schoolName || 'Isabela East Central Elementary School'}
+            </p>
+            <div
+              className="inline-flex items-center gap-1.5 mt-3 px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-sm"
+              style={{ backgroundColor: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}
+            >
+              ⚠️ Data shown is aggregated — no individual learner information is displayed
+            </div>
           </div>
 
-          <p className="text-rose-100 text-sm opacity-80">
-            {FEEDING_PROGRAM} · {meta.schoolName || 'Isabela East Central Elementary School'}
-          </p>
-          <div
-            className="inline-flex items-center gap-1.5 mt-3 px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-sm"
-            style={{ backgroundColor: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}
-          >
-            ⚠️ Data shown is aggregated — no individual learner information is displayed
+          {/* Right Side Slideshow Container */}
+          <div className="flex-shrink-0 flex justify-center items-center relative w-64 sm:w-80 md:w-[380px] lg:w-[440px] h-[300px] sm:h-[350px] md:h-[380px]">
+            {BANNER_IMAGES.map((src, index) => (
+              <div
+                key={src}
+                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out flex justify-center items-center ${
+                  index === currentImgIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                }`}
+              >
+                <Image
+                  src={src}
+                  alt={`Nutritional Status Banner Slide ${index + 1}`}
+                  width={600}
+                  height={600}
+                  className="w-full h-full object-contain drop-shadow-xl"
+                  priority={index === 0}
+                />
+              </div>
+            ))}
           </div>
         </div>
       </section>
