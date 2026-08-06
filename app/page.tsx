@@ -30,6 +30,21 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-[#5C1313] text-white py-8 sm:py-12 lg:py-16 border-b-4 border-[#F5A623]">
         
+        {/* Left Side: Background Video directly behind Principal */}
+        <div className="absolute left-0 top-0 bottom-0 w-full lg:w-[52%] z-0 pointer-events-none overflow-hidden">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover brightness-75 opacity-50"
+          >
+            <source src="/video.mp4" type="video/mp4" />
+          </video>
+          {/* Subtle gradient to seamlessly fade video into the center maroon background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-[#5C1313]/40 to-[#5C1313]" />
+        </div>
+
         {/* Right Side: Landmark Slideshow */}
         <div 
           className="absolute right-0 top-0 bottom-0 w-full lg:w-[48%] hidden lg:block z-0 pointer-events-none overflow-hidden"
@@ -76,24 +91,13 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Far Left Animated Watermark Logo (Gentle Floating Effect) */}
-        <div className="absolute -left-20 top-1/2 opacity-15 pointer-events-none hidden lg:block z-0 animate-float-slow">
-          <Image 
-            src="/ieceslogo.png" 
-            alt="" 
-            width={700} 
-            height={700} 
-            priority 
-          />
-        </div>
-
         {/* Hero Main Content Container */}
         <div className="w-full px-4 sm:px-6 lg:px-12 relative z-10">
           <div className="flex flex-col lg:flex-row items-center lg:items-start gap-4 lg:gap-6 max-w-full">
             
-            {/* Principal Glass Card */}
+            {/* Principal Glass Card (Translucent & Unblurred) */}
             <div className="flex-shrink-0 w-full sm:w-72 lg:w-64">
-              <div className="p-5 rounded-2xl bg-white/10 sm:bg-white/5 border border-white/20 backdrop-blur-md shadow-2xl flex flex-col items-center text-center w-full">
+              <div className="p-5 rounded-2xl bg-black/20 sm:bg-white/10 border border-white/25 shadow-2xl flex flex-col items-center text-center w-full">
                 <div className="relative w-36 h-36 sm:w-44 sm:h-44 mb-3 rounded-full overflow-hidden border-4 border-amber-400 shadow-xl">
                   <Image 
                     src="/principal.png" 
@@ -132,7 +136,7 @@ export default function HomePage() {
                 </Link>
                 <Link
                   href="/nutritional-status"
-                  className="px-5 py-2.5 sm:py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-xs uppercase tracking-wider backdrop-blur-md border border-white/20 transition-all"
+                  className="px-5 py-2.5 sm:py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-xs uppercase tracking-wider border border-white/20 transition-all"
                 >
                   Nutritional Status
                 </Link>
