@@ -76,8 +76,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Far Left Watermark Logo */}
-        <div className="absolute -left-20 top-1/2 -translate-y-1/2 opacity-15 pointer-events-none hidden lg:block z-0">
+        {/* Far Left Animated Watermark Logo (Gentle Floating Effect) */}
+        <div className="absolute -left-20 top-1/2 opacity-15 pointer-events-none hidden lg:block z-0 animate-float-slow">
           <Image 
             src="/ieceslogo.png" 
             alt="" 
@@ -113,7 +113,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* School Name & Mission Text Block (Shifted Left & Single-Line Heading) */}
+            {/* School Name & Mission Text Block */}
             <div className="flex-1 text-center lg:text-left min-w-0">
               <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-[2.25rem] xl:text-[2.65rem] font-serif font-bold tracking-tight text-amber-400 leading-none whitespace-nowrap drop-shadow-md">
                 Isabela East Central Elementary School

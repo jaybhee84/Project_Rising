@@ -21,3 +21,20 @@ body {
   background-color: var(--bg-main);
   -webkit-font-smoothing: antialiased;
 }
+
+/* Gentle Floating Animation for Watermark */
+@keyframes floatSlow {
+
+  0%,
+  100% {
+    transform: translateY(-50%) scale(1);
+  }
+
+  50% {
+    transform: translateY(-53%) scale(1.02);
+  }
+}
+
+.animate-float-slow {
+  animation: floatSlow 10s ease-in-out infinite;
+}
