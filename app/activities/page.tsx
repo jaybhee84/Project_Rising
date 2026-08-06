@@ -31,6 +31,12 @@ export default function ActivitiesPage() {
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+  // Track active slide index for each article using its ID as the key
+  const [activeImageIndices, setActiveImageIndices] = useState<Record<string | number, number>>({})
+
+  // Track image URL for full-screen modal
+  const [modalImage, setModalImage] = useState<string | null>(null)
+
   const fetchArticles = async () => {
     try {
       setLoading(true)
@@ -77,6 +83,22 @@ export default function ActivitiesPage() {
       supabase.removeChannel(channel)
     }
   }, [])
+
+  const handlePrevImage = (articleId: string | number, maxPhotos: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setActiveImageIndices((prev) => {
+      const current = prev[articleId] || 0
+      return { ...prev, [articleId]: current === 0 ? maxPhotos - 1 : current - 1 }
+    })
+  }
+
+  const handleNextImage = (articleId: string | number, maxPhotos: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setActiveImageIndices((prev) => {
+      const current = prev[articleId] || 0
+      return { ...prev, [articleId]: (current + 1) % maxPhotos }
+    })
+  }
 
   const filteredArticles = selectedCategory
     ? articles.filter((item) => item.category === selectedCategory)
@@ -227,8 +249,9 @@ export default function ActivitiesPage() {
                 borderColor: 'border-emerald-200',
               }
 
-              const coverImage =
-                item.photos && item.photos.length > 0 ? item.photos[0] : null
+              const photos = item.photos && item.photos.length > 0 ? item.photos : []
+              const currentIndex = activeImageIndices[item.id] || 0
+              const currentPhoto = photos[currentIndex]
 
               const dateString =
                 item.day && item.month && item.year
@@ -247,13 +270,49 @@ export default function ActivitiesPage() {
                   className="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group"
                 >
                   <div className="p-5">
-                    <div className="w-full h-52 rounded-xl mb-4 border border-slate-100 overflow-hidden relative bg-slate-100">
-                      {coverImage ? (
-                        <img
-                          src={coverImage}
-                          alt={item.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
+                    {/* Image / Slideshow Container */}
+                    <div className="w-full h-52 rounded-xl mb-4 border border-slate-100 overflow-hidden relative bg-slate-100 group/image">
+                      {photos.length > 0 ? (
+                        <>
+                          <img
+                            src={currentPhoto}
+                            alt={item.title}
+                            onClick={() => setModalImage(currentPhoto)}
+                            className="w-full h-full object-cover group-hover/image:scale-105 transition-transform duration-300 cursor-pointer"
+                          />
+
+                          {/* Navigation Controls for Multiple Photos */}
+                          {photos.length > 1 && (
+                            <>
+                              <button
+                                onClick={(e) => handlePrevImage(item.id, photos.length, e)}
+                                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-opacity opacity-0 group-hover/image:opacity-100"
+                                aria-label="Previous photo"
+                              >
+                                ❮
+                              </button>
+                              <button
+                                onClick={(e) => handleNextImage(item.id, photos.length, e)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-opacity opacity-0 group-hover/image:opacity-100"
+                                aria-label="Next photo"
+                              >
+                                ❯
+                              </button>
+
+                              {/* Dot Indicators */}
+                              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                                {photos.map((_, idx) => (
+                                  <span
+                                    key={idx}
+                                    className={`block h-1.5 rounded-full transition-all ${
+                                      idx === currentIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/50'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </>
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
                           <span className="text-5xl mb-2">{catInfo.icon}</span>
@@ -301,6 +360,26 @@ export default function ActivitiesPage() {
           </Link>
         </div>
       </div>
+
+      {/* Fullscreen Modal View */}
+      {modalImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setModalImage(null)}
+        >
+          <button
+            onClick={() => setModalImage(null)}
+            className="absolute top-6 right-6 text-white text-3xl font-bold hover:text-rose-400 transition-colors"
+          >
+            ✕
+          </button>
+          <img
+            src={modalImage}
+            alt="Expanded view"
+            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+          />
+        </div>
+      )}
     </div>
   )
 }
