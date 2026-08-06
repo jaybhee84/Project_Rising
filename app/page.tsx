@@ -39,7 +39,7 @@ export default function HomePage() {
             playsInline
             className="w-full h-full object-cover brightness-75 opacity-50"
           >
-            <source src="/video.mp4" type="video/mp4" />
+            <source src="https://nv3z9cmjl8zrr0z1.public.blob.vercel-storage.com/video.MP4" type="video/mp4" />
           </video>
           {/* Subtle gradient to seamlessly fade video into the center maroon background */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-[#5C1313]/40 to-[#5C1313]" />
