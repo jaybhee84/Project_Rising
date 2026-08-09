@@ -1,570 +1,433 @@
-/**
- * app/org-chart/page.tsx
- * Public org chart page for IECES Project Rising website.
- */
+"use client";
 
-import { createClient } from "@supabase/supabase-js";
+import React, { useState, useEffect } from "react";
+import { supabase, MOOE_TABLE } from "@/lib/supabase";
 
-// ─── 1. Interfaces & Types ───────────────────────────────────────────────────
-interface StaffMember {
-  id: string;
-  name: string;
-  category: "admin" | "teaching" | "non-teaching" | "job-order";
-  admin_position?: string;
-  teaching_position?: string;
-  teaching_type?: string;
-  is_designated?: boolean;
-  grade_level?: string;
-  is_grade_chairman?: boolean;
-  status: "alive" | "substitute";
-  sub_expiry_start?: string;
-  sub_expiry_end?: string;
-  photo_url?: string;
+interface ExpenseItem {
+  objectCode: string;
+  amount: number;
 }
 
-// ─── 2. Constants ────────────────────────────────────────────────────────────
-const ADMIN_ORDER = [
-  "Principal",
-  "Assistant Principal",
-  "Head Teacher I",
-  "Head Teacher II",
-  "Head Teacher III",
-  "Head Teacher IV",
-  "Head Teacher V",
-  "Head Teacher VI",
-  "Administrative Officer II (AO II)",
-  "Planning & Development Officer I (PDO I)",
-  "Administrative Assistant III (Senior Bookkeeper)",
-  "Administrative Assistant II (Disbursing Officer)",
-  "Administrative Aide (Job Order)",
-];
-
-const GRADE_LEVELS = [
-  "SPED",
-  "Kinder",
-  "Grade 1",
-  "Grade 2",
-  "Grade 3",
-  "Grade 4",
-  "Grade 5",
-  "Grade 6",
-];
-
-// ─── 3. Helper Functions ──────────────────────────────────────────────────────
-function isExpired(person: StaffMember): boolean {
-  if (person.status !== "substitute" || !person.sub_expiry_end) return false;
-  const expiry = new Date(person.sub_expiry_end + "T23:59:59");
-  return new Date() > expiry;
+interface ReceiptItem {
+  url: string;
+  path: string;
 }
 
-function formatSubDate(iso?: string): string {
-  if (!iso) return "";
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-PH", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
+interface MooeRecord {
+  id?: string;
+  cy?: string;
+  sy?: string;
+  month: string;
+  allocation: number;
+  total: number;
+  balance: number;
+  items: ExpenseItem[];
+  liquidated_by?: string;
+  liquidatedBy?: string;
+  date_received?: string;
+  date_liquidated?: string;
+  remarks?: string;
+  receipts?: ReceiptItem[];
+}
+
+const MONTHS: string[] = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const OBJECT_CODE_MAP: Record<string, string> = {
+  "5020101000": "Traveling Expenses - Local",
+  "5020201000": "Training Expenses",
+  "5020301000": "Office Supplies Expenses",
+  "5020302000": "Accountable Forms Expenses",
+  "5020303000": "Non-Accountable Forms Expenses",
+  "5020304000": "Animal/Zoological Supplies Expenses",
+  "5020305000": "Food Supplies Expenses",
+  "5020307000": "Drugs and Medicines Expenses",
+  "5020308000": "Medical, Dental & Lab Supplies",
+  "5020309000": "Fuel, Oil and Lubricants Expenses",
+  "5020311000": "Textbooks and Instructional Materials",
+  "5020311001": "Semi-Expendable - Machinery",
+  "5020311002": "Semi-Expendable - Office Equipment / Teaching Supplies",
+  "5020311003": "Semi-Expendable - ICT Equipment",
+  "5020311004": "Semi-Expendable - Communications Equipment",
+  "5020311007": "Semi-Expendable - Printing Equipment",
+  "5020311013": "Semi-Expendable - Furniture & Fixtures",
+  "5020321099": "Semi-Expendable - Other Property",
+  "5020399000": "Other Supplies and Materials Expenses",
+  "5020401000": "Water Expenses",
+  "5020402000": "Electricity Expenses",
+  "5020501000": "Postage and Courier Services",
+  "5020502001": "Telephone Expenses - Mobile",
+  "5020502002": "Telephone Expenses - Landline",
+  "5020503000": "Internet Subscription Expenses",
+  "5020601000": "Awards and Rewards Expenses",
+  "5021199000": "Other Professional Services",
+  "5021202000": "Janitorial Services",
+  "5021203000": "Security Services",
+  "5021299000": "Other General Services",
+  "5021304001": "R&M - Buildings and Other Structures",
+  "5021307000": "R&M - Furniture and Fixtures",
+  "5021321002": "R&M - Office Equipment",
+  "5021321003": "R&M - ICT Equipment",
+  "5021502000": "Fidelity Bond Premiums",
+  "5021503000": "Insurance Expenses",
+  "5029901000": "Advertising Expenses",
+  "5029902000": "Printing and Publication Expenses",
+  "5029903000": "Representation Expenses",
+  "5029904000": "Transportation and Delivery Expenses",
+  "5029905000": "Rent/Lease Expenses",
+  "5029999099": "Other Maintenance and Operating Expenses",
+  "5030104000": "Bank Charges",
+};
+
+const fmt = (n: number | string | undefined): string =>
+  Number(n || 0).toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
-}
 
-// ─── 4. Data Fetching ────────────────────────────────────────────────────────
-async function getStaff(): Promise<StaffMember[]> {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  const { data, error } = await supabase
-    .from("org_chart")
-    .select("*")
-    .order("created_at", { ascending: true });
+const parseCodeAndTitle = (rawObjectCode: string) => {
+  if (!rawObjectCode) return { code: "—", title: "—" };
+  let code = rawObjectCode.trim();
+  let title = "";
+  if (code.includes("—")) {
+    const parts = code.split("—");
+    code = parts[0].trim();
+    title = parts[1]?.trim() || "";
+  } else if (code.includes("-")) {
+    const parts = code.split("-");
+    code = parts[0].trim();
+    title = parts[1]?.trim() || "";
+  }
+  if (!title) {
+    title = OBJECT_CODE_MAP[code] || "General Operating Expense";
+  }
+  return { code, title };
+};
 
-  if (error || !data) return [];
-  return (data as StaffMember[]).filter((p) => !isExpired(p));
-}
+export default function Page() {
+  const [records, setRecords] = useState<MooeRecord[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [selectedCY, setSelectedCY] = useState<string>("ALL");
+  const [selectedMonth, setSelectedMonth] = useState<string>("ALL");
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number>(0);
+  const [lightboxList, setLightboxList] = useState<ReceiptItem[]>([]);
 
-// ─── 5. Staff Card Component ──────────────────────────────────────────────────
-/**
- * Fixed-size card: 152px × 170px.
- * White background, subtle shadow, maroon left-border accent.
- * Large circle photo (80px) centered near the top; text below.
- */
-function StaffCard({
-  person,
-  highlight = false,
-}: {
-  person: StaffMember;
-  highlight?: boolean;
-}) {
-  const isSubstitute = person.status === "substitute";
+  useEffect(() => {
+    fetchPublicRecords();
+  }, []);
 
-  // Admin: show "Designated X" if is_designated, else admin_position
-  // Teaching: positionTitle = DepEd rank (Teacher VI, Master Teacher II…)
-  //           roleLabel     = teaching_type (Adviser / Subject Teacher)
-  const positionTitle =
-    person.category === "admin"
-      ? person.is_designated
-        ? `Designated ${person.admin_position}`
-        : person.admin_position || ""
-      : person.category === "teaching"
-      ? person.teaching_position || "Teacher I"
-      : person.admin_position || "";
+  // Close lightbox on Escape key
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (!lightboxUrl) return;
+      if (e.key === "Escape") closeLightbox();
+      if (e.key === "ArrowRight") navigateLightbox(1);
+      if (e.key === "ArrowLeft") navigateLightbox(-1);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [lightboxUrl, lightboxIndex, lightboxList]);
 
-  // For teaching: show teaching_type directly (Adviser / Subject Teacher)
-  const roleLabel =
-    person.category === "teaching"
-      ? person.teaching_type || null
-      : null;
+  const fetchPublicRecords = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from(MOOE_TABLE).select("*");
+    if (error) {
+      console.error("Error loading public MOOE records:", error);
+      setLoading(false);
+      return;
+    }
+    const formattedData: MooeRecord[] = (data || []).map((r: MooeRecord) => ({
+      ...r,
+      cy: r.cy || r.sy || "CY 2026",
+      receipts: r.receipts || [],
+    }));
+    const sorted = formattedData.sort((a, b) => {
+      if (a.cy !== b.cy) return (b.cy || "").localeCompare(a.cy || "");
+      return MONTHS.indexOf(a.month) - MONTHS.indexOf(b.month);
+    });
+    setRecords(sorted);
+    if (sorted.length > 0 && sorted[0].cy) setSelectedCY(sorted[0].cy);
+    setLoading(false);
+  };
 
-  const accentColor = highlight ? "#B8860B" : isSubstitute ? "#D97706" : "#7B1C1C";
+  const openLightbox = (receipts: ReceiptItem[], startIndex: number) => {
+    setLightboxList(receipts);
+    setLightboxIndex(startIndex);
+    setLightboxUrl(receipts[startIndex].url);
+  };
+
+  const closeLightbox = () => {
+    setLightboxUrl(null);
+    setLightboxList([]);
+    setLightboxIndex(0);
+  };
+
+  const navigateLightbox = (dir: number) => {
+    const next = lightboxIndex + dir;
+    if (next < 0 || next >= lightboxList.length) return;
+    setLightboxIndex(next);
+    setLightboxUrl(lightboxList[next].url);
+  };
+
+  const availableCYs: string[] = Array.from(
+    new Set(records.map((r) => r.cy).filter((cy): cy is string => Boolean(cy)))
+  ).sort((a, b) => b.localeCompare(a));
+
+  const filteredRecords = records.filter((r) => {
+    const matchCY = selectedCY === "ALL" || r.cy === selectedCY;
+    const matchMonth = selectedMonth === "ALL" || r.month === selectedMonth;
+    return matchCY && matchMonth;
+  });
+
+  const totalAllocation = filteredRecords.reduce((s, r) => s + (r.allocation || 0), 0);
+  const totalExpenses = filteredRecords.reduce((s, r) => s + (r.total || 0), 0);
+  const totalBalance = totalAllocation - totalExpenses;
 
   return (
-    <div style={{ width: 152, height: 170, flexShrink: 0 }} className="relative">
-      <div
-        className="absolute inset-0 rounded-xl bg-white flex flex-col items-center"
-        style={{
-          boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
-          border: `2px solid ${accentColor}`,
-        }}
-      >
-        {/* Badges */}
-        {highlight && (
-          <span
-            className="absolute top-1.5 right-1.5 z-10 text-[0.48rem] font-black uppercase px-1.5 py-0.5 rounded-full leading-none"
-            style={{ background: "#B8860B", color: "#fff" }}
-          >
-            ⭐ Chair
-          </span>
-        )}
-        {isSubstitute && !highlight && (
-          <span className="absolute top-1.5 right-1.5 z-10 bg-amber-500 text-white text-[0.48rem] font-bold uppercase px-1.5 py-0.5 rounded-full leading-none">
-            SUB
-          </span>
-        )}
-
-        {/* Circle photo — large, centered */}
-        <div
-          className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
-          style={{
-            width: 80,
-            height: 80,
-            marginTop: 14,
-            border: `2.5px solid ${accentColor}`,
-            background: "#f1f5f9",
-          }}
-        >
-          {person.photo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={person.photo_url}
-              alt={person.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
-            />
-          ) : (
-            <div style={{ fontSize: "2rem" }} className="select-none">👤</div>
-          )}
-        </div>
-
-        {/* Text block */}
-        <div className="flex flex-col items-center text-center px-2 mt-2" style={{ width: "100%" }}>
-          {/* Name */}
-          <div
-            className="font-extrabold leading-tight w-full"
-            style={{
-              fontSize: "0.68rem",
-              color: "#1e293b",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
-            {person.name}
-          </div>
-
-          {/* Position title */}
-          <div
-            className="font-semibold leading-tight mt-0.5 w-full"
-            style={{
-              fontSize: "0.58rem",
-              color: accentColor,
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
-            {positionTitle}
-          </div>
-
-          {/* Role label — teaching only */}
-          {roleLabel && (
-            <div
-              className="leading-tight mt-0.5 w-full truncate"
-              style={{ fontSize: "0.52rem", color: "#64748b" }}
-            >
-              {roleLabel}
-            </div>
-          )}
-
-          {/* Substitute expiry */}
-          {isSubstitute && (
-            <div
-              className="mt-1 w-full text-center truncate rounded px-1 py-0.5"
-              style={{
-                fontSize: "0.47rem",
-                color: "#92400e",
-                background: "rgba(251,191,36,0.15)",
-                border: "1px solid #fcd34d",
-              }}
-            >
-              Until {formatSubDate(person.sub_expiry_end)}
-            </div>
-          )}
-        </div>
+    <div className="max-w-6xl mx-auto px-4 py-10">
+      {/* Breadcrumbs */}
+      <div className="mb-6 flex items-center gap-2 text-sm text-gray-500">
+        <a href="/" className="hover:text-blue-600">Home</a>
+        <span>/</span>
+        <span>MOOE Expenses & Liquidation</span>
       </div>
-    </div>
-  );
-}
 
-// ─── 6. Arrow Connector ───────────────────────────────────────────────────────
-/** Vertical arrow going straight down, used between two stacked cards */
-function ArrowDown({ height = 32 }: { height?: number }) {
-  return (
-    <svg
-      width="20"
-      height={height}
-      viewBox={`0 0 20 ${height}`}
-      className="block mx-auto flex-shrink-0"
-      style={{ overflow: "visible" }}
-    >
-      <defs>
-        <marker
-          id="arrowhead-down"
-          markerWidth="6"
-          markerHeight="6"
-          refX="3"
-          refY="3"
-          orient="auto"
-        >
-          <path d="M0,0 L0,6 L6,3 z" fill="#475569" />
-        </marker>
-      </defs>
-      <line
-        x1="10"
-        y1="0"
-        x2="10"
-        y2={height - 4}
-        stroke="#475569"
-        strokeWidth="1.5"
-        markerEnd="url(#arrowhead-down)"
-      />
-    </svg>
-  );
-}
-
-/**
- * Branching connector: a vertical stem, a horizontal bar, then downward legs
- * to N children. Uses an inline SVG sized to exactly span the children.
- */
-function BranchConnector({
-  childCount,
-  childWidth = 160,
-  gap = 12,
-}: {
-  childCount: number;
-  childWidth?: number;
-  gap?: number;
-}) {
-  if (childCount === 0) return null;
-
-  const totalWidth = childCount * childWidth + (childCount - 1) * gap;
-  const svgH = 40;
-  const stemH = 16; // vertical stem coming down from parent
-  const barY = stemH; // y of horizontal bar
-  const legH = svgH - barY; // height of each downward leg
-
-  // X center of each child
-  const centers = Array.from({ length: childCount }, (_, i) =>
-    i * (childWidth + gap) + childWidth / 2
-  );
-
-  const midX = totalWidth / 2;
-
-  return (
-    <svg
-      width={totalWidth}
-      height={svgH}
-      viewBox={`0 0 ${totalWidth} ${svgH}`}
-      className="block flex-shrink-0"
-      style={{ overflow: "visible" }}
-    >
-      <defs>
-        <marker
-          id="arrowhead-branch"
-          markerWidth="6"
-          markerHeight="6"
-          refX="3"
-          refY="3"
-          orient="auto"
-        >
-          <path d="M0,0 L0,6 L6,3 z" fill="#475569" />
-        </marker>
-      </defs>
-      {/* Vertical stem from parent */}
-      <line
-        x1={midX}
-        y1={0}
-        x2={midX}
-        y2={barY}
-        stroke="#475569"
-        strokeWidth="1.5"
-      />
-      {/* Horizontal bar */}
-      {childCount > 1 && (
-        <line
-          x1={centers[0]}
-          y1={barY}
-          x2={centers[childCount - 1]}
-          y2={barY}
-          stroke="#475569"
-          strokeWidth="1.5"
-        />
-      )}
-      {/* Vertical legs down to each child with arrowhead */}
-      {centers.map((cx, i) => (
-        <line
-          key={i}
-          x1={cx}
-          y1={barY}
-          x2={cx}
-          y2={svgH - 4}
-          stroke="#475569"
-          strokeWidth="1.5"
-          markerEnd="url(#arrowhead-branch)"
-        />
-      ))}
-    </svg>
-  );
-}
-
-// ─── 7. Main Page ────────────────────────────────────────────────────────────
-export default async function DirectoryPage() {
-  const allStaff = await getStaff();
-
-  const adminStaff = allStaff.filter((s) => s.category === "admin");
-  const teachingStaff = allStaff.filter((s) => s.category === "teaching");
-  const nonTeaching = allStaff.filter((s) => s.category === "non-teaching" || s.category === "job-order");
-
-  const sortedAdmin = [...adminStaff].sort((a, b) => {
-    const ai = ADMIN_ORDER.indexOf(a.admin_position || "");
-    const bi = ADMIN_ORDER.indexOf(b.admin_position || "");
-    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-  });
-
-  const principal = sortedAdmin.find(
-    (s) =>
-      s.admin_position?.toLowerCase().includes("principal") &&
-      !s.admin_position?.toLowerCase().includes("asst") &&
-      !s.admin_position?.toLowerCase().includes("assistant") &&
-      !s.admin_position?.toLowerCase().includes("designated")
-  );
-
-  const vicePrincipal = sortedAdmin.find(
-    (s) =>
-      s.id !== principal?.id &&
-      s.admin_position === "Assistant Principal"
-  );
-
-  const otherAdmin = sortedAdmin.filter(
-    (s) => s.id !== principal?.id && s.id !== vicePrincipal?.id
-  );
-
-  const isEmpty = allStaff.length === 0;
-
-  // Card dimensions used for connector math
-  const CARD_W = 160;
-  const CARD_GAP = 12;
-
-  return (
-    <div className="min-h-screen bg-slate-100 py-8 px-2 md:px-6">
       {/* Header */}
-      <div className="max-w-[1600px] mx-auto text-center mb-8">
-        <h1 className="text-2xl md:text-3xl font-black text-[#7B1C1C] uppercase tracking-wider">
-          Isabela East Central Elementary School
-        </h1>
-        <p className="text-slate-600 font-bold text-sm tracking-wide">
-          SDO Isabela City, Basilan — Organizational Structure
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-black" style={{ color: "var(--deped-blue, #003366)" }}>
+            MOOE Expenses & Liquidation
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Official monthly budget utilization and financial reports
+          </p>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col">
+            <label className="text-xs font-semibold text-gray-500 mb-1">Calendar Year</label>
+            <select
+              value={selectedCY}
+              onChange={(e) => setSelectedCY(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-medium bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">All Calendar Years</option>
+              {availableCYs.map((cy) => (
+                <option key={cy} value={cy}>{cy}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col">
+            <label className="text-xs font-semibold text-gray-500 mb-1">Month</label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-medium bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">All Months</option>
+              {MONTHS.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto">
-        {isEmpty ? (
-          <div className="text-center py-16 bg-white rounded-xl border border-slate-300">
-            <h2 className="text-lg font-bold text-slate-700">
-              No directory entries found.
-            </h2>
+      {/* Main Content */}
+      {loading ? (
+        <div className="py-20 text-center text-gray-500 text-sm">
+          Loading reports from Supabase...
+        </div>
+      ) : filteredRecords.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+          <div className="text-4xl mb-3">📊</div>
+          <h2 className="text-base font-bold text-gray-700">No Records Found</h2>
+          <p className="text-gray-500 text-xs max-w-xs mt-1">
+            There are no published MOOE liquidation reports for the selected filters.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 rounded-xl border bg-blue-50 border-blue-100">
+              <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Total Allocation</span>
+              <div className="text-xl font-bold text-blue-900 mt-1">₱{fmt(totalAllocation)}</div>
+            </div>
+            <div className="p-4 rounded-xl border bg-amber-50 border-amber-100">
+              <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Total Liquidated</span>
+              <div className="text-xl font-bold text-amber-900 mt-1">₱{fmt(totalExpenses)}</div>
+            </div>
+            <div className="p-4 rounded-xl border bg-emerald-50 border-emerald-100">
+              <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Unliquidated Balance</span>
+              <div className="text-xl font-bold text-emerald-900 mt-1">₱{fmt(totalBalance)}</div>
+            </div>
           </div>
-        ) : (
-          <div className="space-y-10">
-            {/* ── 1. Administration Hierarchy ─────────────────────────────── */}
-            {sortedAdmin.length > 0 && (
-              <section className="flex flex-col items-center">
-                {/* Principal */}
-                {principal && (
-                  <div className="flex flex-col items-center">
-                    <StaffCard person={principal} />
-                    {(vicePrincipal || otherAdmin.length > 0) && (
-                      <ArrowDown height={32} />
-                    )}
-                  </div>
-                )}
 
-                {/* Vice / Designated AP */}
-                {vicePrincipal && (
-                  <div className="flex flex-col items-center">
-                    <StaffCard person={vicePrincipal} />
-                    {otherAdmin.length > 0 && <ArrowDown height={32} />}
-                  </div>
-                )}
+          {/* Records */}
+          <div className="space-y-4">
+            {filteredRecords.map((r, i) => {
+              const receipts = r.receipts || [];
+              return (
+                <div key={r.id || i} className="bg-white border rounded-xl shadow-sm overflow-hidden">
 
-                {/* Other Admin — horizontal row with branching arrows */}
-                {otherAdmin.length > 0 && (
-                  <div className="flex flex-col items-center">
-                    <BranchConnector
-                      childCount={otherAdmin.length}
-                      childWidth={CARD_W}
-                      gap={CARD_GAP}
-                    />
-                    <div
-                      className="flex"
-                      style={{ gap: CARD_GAP }}
-                    >
-                      {otherAdmin.map((person) => (
-                        <StaffCard key={person.id} person={person} />
-                      ))}
+                  {/* Header */}
+                  <div className="p-4 bg-gray-50 border-b flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                        {r.cy}
+                      </span>
+                      <span className="text-base font-bold text-gray-800">{r.month}</span>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Liquidated by:{" "}
+                      <b className="text-gray-700">{r.liquidated_by || r.liquidatedBy || "—"}</b>
                     </div>
                   </div>
-                )}
-              </section>
+
+                  {/* Expense Table */}
+                  <div className="p-4 overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b text-gray-400 font-semibold uppercase">
+                          <th className="pb-2 w-1/4">Account Code</th>
+                          <th className="pb-2 w-1/2">Account Title</th>
+                          <th className="pb-2 w-1/4 text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y text-gray-700">
+                        {(r.items || []).map((item, idx) => {
+                          const { code, title } = parseCodeAndTitle(item.objectCode);
+                          return (
+                            <tr key={idx} className="hover:bg-gray-50/50">
+                              <td className="py-2.5 font-mono text-gray-800 font-medium">{code}</td>
+                              <td className="py-2.5 text-gray-600">{title}</td>
+                              <td className="py-2.5 text-right font-medium text-gray-900">₱{fmt(item.amount)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Footer Totals */}
+                  <div className="px-4 py-3 bg-gray-50/50 border-t flex flex-wrap items-center justify-between text-xs font-medium text-gray-600">
+                    <div>Allocation: <b>₱{fmt(r.allocation)}</b></div>
+                    <div>Expenses: <b className="text-amber-700">₱{fmt(r.total)}</b></div>
+                    <div>Balance: <b className="text-emerald-700">₱{fmt(r.balance)}</b></div>
+                  </div>
+
+                  {/* ── RECEIPTS SECTION ── */}
+                  {receipts.length > 0 && (
+                    <div className="px-4 py-3 border-t bg-gray-50/30">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                        📎 Supporting Documents / Receipts ({receipts.length})
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {receipts.map((rec, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => openLightbox(receipts, idx)}
+                            className="relative group w-16 h-16 rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 transition-all shadow-sm hover:shadow-md focus:outline-none"
+                            title={`View receipt ${idx + 1}`}
+                          >
+                            <img
+                              src={rec.url}
+                              alt={`Receipt ${idx + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            {/* Hover overlay */}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
+                              <span className="text-white text-lg opacity-0 group-hover:opacity-100 transition-opacity">🔍</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── LIGHTBOX ── */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={closeLightbox}
+        >
+          <div
+            className="relative max-w-4xl w-full flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close */}
+            <button
+              onClick={closeLightbox}
+              className="absolute -top-10 right-0 text-white text-2xl font-bold hover:text-gray-300 transition-colors"
+              title="Close (Esc)"
+            >
+              ✕
+            </button>
+
+            {/* Image */}
+            <img
+              src={lightboxUrl}
+              alt="Receipt"
+              className="max-h-[80vh] max-w-full rounded-xl shadow-2xl object-contain"
+            />
+
+            {/* Counter */}
+            {lightboxList.length > 1 && (
+              <div className="mt-3 text-white text-sm font-medium opacity-80">
+                {lightboxIndex + 1} / {lightboxList.length}
+              </div>
             )}
 
-            {/* ── 2. Teaching Force ────────────────────────────────────────── */}
-            {teachingStaff.length > 0 && (
-              <section className="pt-6 border-t-2 border-slate-300 overflow-x-auto">
-                <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide mb-6">
-                  Teaching Force
-                </h2>
-
-                <div
-                  className="bg-white p-4 rounded-xl border border-slate-300"
-                  style={{ minWidth: 1300 }}
+            {/* Prev / Next */}
+            {lightboxList.length > 1 && (
+              <div className="flex gap-4 mt-3">
+                <button
+                  onClick={() => navigateLightbox(-1)}
+                  disabled={lightboxIndex === 0}
+                  className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  {/* Grade columns */}
-                  <div className="grid grid-cols-8 gap-3">
-                    {GRADE_LEVELS.map((gl) => {
-                      const gradeTeachers = teachingStaff.filter(
-                        (t) => t.grade_level === gl
-                      );
-                      const chairman = gradeTeachers.find(
-                        (t) => t.is_grade_chairman
-                      );
-                      const others = gradeTeachers.filter(
-                        (t) => t.id !== chairman?.id
-                      );
-
-                      return (
-                        <div
-                          key={gl}
-                          className="flex flex-col items-center border-r last:border-r-0 border-slate-200 px-1"
-                        >
-                          {/* Grade header */}
-                          <div className="w-full text-center py-1 px-1 bg-[#7B1C1C] text-white font-black text-[0.7rem] uppercase rounded mb-3 whitespace-nowrap">
-                            {gl}
-                          </div>
-
-                          {/* Teachers in this grade */}
-                          <div className="flex flex-col items-center w-full gap-0">
-                            {gradeTeachers.length === 0 && (
-                              <div className="text-[0.65rem] text-slate-400 text-center italic py-4 whitespace-nowrap">
-                                Unassigned
-                              </div>
-                            )}
-
-                            {/* Chairman */}
-                            {chairman && (
-                              <div className="flex flex-col items-center">
-                                <StaffCard person={chairman} highlight={true} />
-                                {others.length > 0 && (
-                                  <>
-                                    {others.length === 1 ? (
-                                      <ArrowDown height={28} />
-                                    ) : (
-                                      <BranchConnector
-                                        childCount={others.length}
-                                        childWidth={CARD_W}
-                                        gap={CARD_GAP}
-                                      />
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            )}
-
-                            {/* If no chairman, show all teachers in a column */}
-                            {!chairman && others.length === 0 && null}
-
-                            {/* Regular teachers */}
-                            {chairman && others.length > 0 ? (
-                              // With chairman: display others in a flex row below the branch
-                              <div
-                                className="flex"
-                                style={{ gap: CARD_GAP }}
-                              >
-                                {others.map((person) => (
-                                  <StaffCard key={person.id} person={person} />
-                                ))}
-                              </div>
-                            ) : (
-                              // No chairman: stack vertically with arrows
-                              others.map((person, idx) => (
-                                <div
-                                  key={person.id}
-                                  className="flex flex-col items-center"
-                                >
-                                  {idx > 0 && <ArrowDown height={24} />}
-                                  <StaffCard person={person} />
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </section>
+                  ← Prev
+                </button>
+                <button
+                  onClick={() => navigateLightbox(1)}
+                  disabled={lightboxIndex === lightboxList.length - 1}
+                  className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next →
+                </button>
+              </div>
             )}
 
-            {/* ── 3. Job Order Staff ────────────────────────────────────── */}
-            {nonTeaching.length > 0 && (
-              <section className="space-y-4 pt-6 border-t-2 border-slate-300">
-                <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide">
-                  Job Order Staff
-                </h2>
-                <div className="bg-white p-4 rounded-lg border border-slate-300 shadow-sm">
-                  <div
-                    className="flex flex-wrap justify-center"
-                    style={{ gap: CARD_GAP }}
+            {/* Thumbnail strip */}
+            {lightboxList.length > 1 && (
+              <div className="flex gap-2 mt-4 flex-wrap justify-center">
+                {lightboxList.map((rec, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => { setLightboxIndex(idx); setLightboxUrl(rec.url); }}
+                    className={`w-12 h-12 rounded-md overflow-hidden border-2 transition-all ${
+                      idx === lightboxIndex ? "border-white scale-110" : "border-white/30 hover:border-white/60"
+                    }`}
                   >
-                    {nonTeaching.map((person) => (
-                      <StaffCard key={person.id} person={person} />
-                    ))}
-                  </div>
-                </div>
-              </section>
+                    <img src={rec.url} alt={`thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
