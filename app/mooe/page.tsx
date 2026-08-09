@@ -278,10 +278,9 @@ export default function Page() {
                   {/* Header */}
                   <div className="p-4 bg-gray-50 border-b flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
-                        {r.cy}
+                      <span className="text-base font-bold text-gray-800">
+                        {r.month} {r.cy?.replace(/^CY\s*/i, "")}
                       </span>
-                      <span className="text-base font-bold text-gray-800">{r.month}</span>
                     </div>
                     <div className="text-xs text-gray-500">
                       Liquidated by:{" "}
