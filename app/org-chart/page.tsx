@@ -11,7 +11,9 @@ interface StaffMember {
   name: string;
   category: "admin" | "teaching" | "non-teaching";
   admin_position?: string;
+  teaching_position?: string;
   teaching_type?: string;
+  is_designated?: boolean;
   grade_level?: string;
   is_grade_chairman?: boolean;
   status: "alive" | "substitute";
@@ -24,12 +26,17 @@ interface StaffMember {
 const ADMIN_ORDER = [
   "Principal",
   "Assistant Principal",
-  "Designated Assistant Principal",
-  "Administrative Officer (AO)",
-  "Planning & Development Officer (PDO)",
-  "ADAS III",
-  "ADAS II",
-  "Admin Aide (Job Order)",
+  "Head Teacher I",
+  "Head Teacher II",
+  "Head Teacher III",
+  "Head Teacher IV",
+  "Head Teacher V",
+  "Head Teacher VI",
+  "Administrative Officer II (AO II)",
+  "Planning & Development Officer I (PDO I)",
+  "Administrative Assistant III (Senior Bookkeeper)",
+  "Administrative Assistant II (Disbursing Officer)",
+  "Administrative Aide (Job Order)",
 ];
 
 const GRADE_LEVELS = [
@@ -75,6 +82,11 @@ async function getStaff(): Promise<StaffMember[]> {
 }
 
 // ─── 5. Staff Card Component ──────────────────────────────────────────────────
+/**
+ * Fixed-size card: 152px × 170px.
+ * White background, subtle shadow, maroon left-border accent.
+ * Large circle photo (80px) centered near the top; text below.
+ */
 function StaffCard({
   person,
   highlight = false,
@@ -84,72 +96,257 @@ function StaffCard({
 }) {
   const isSubstitute = person.status === "substitute";
 
-  // Priority resolution for position titles (e.g., Teacher VI)
+  // Admin: show "Designated X" if is_designated, else admin_position
+  // Teaching: positionTitle = DepEd rank (Teacher VI, Master Teacher II…)
+  //           roleLabel     = teaching_type (Adviser / Subject Teacher)
   const positionTitle =
-    person.admin_position ||
-    person.teaching_type ||
-    "Class Adviser";
+    person.category === "admin"
+      ? person.is_designated
+        ? `Designated ${person.admin_position}`
+        : person.admin_position || ""
+      : person.category === "teaching"
+      ? person.teaching_position || "Teacher I"
+      : person.admin_position || "";
+
+  // For teaching: show teaching_type directly (Adviser / Subject Teacher)
+  const roleLabel =
+    person.category === "teaching"
+      ? person.teaching_type || null
+      : null;
+
+  const accentColor = highlight ? "#B8860B" : isSubstitute ? "#D97706" : "#7B1C1C";
 
   return (
-    <div
-      className={`relative flex flex-col items-center p-2 rounded-lg border-2 shadow-xs text-center bg-white transition-all w-full min-h-[130px] justify-between ${
-        highlight
-          ? "border-amber-400 bg-amber-50/40"
-          : isSubstitute
-          ? "border-amber-300"
-          : "border-[#7B1C1C]/40 hover:border-[#7B1C1C]"
-      }`}
-    >
-      {/* Badges */}
-      {highlight && (
-        <span className="absolute -top-2.5 bg-amber-400 text-slate-900 text-[0.55rem] font-black uppercase px-1.5 py-0.5 rounded-full shadow-xs z-10 whitespace-nowrap">
-          ⭐ Chairman
-        </span>
-      )}
-      {isSubstitute && !highlight && (
-        <span className="absolute -top-2.5 bg-amber-500 text-white text-[0.55rem] font-bold uppercase px-1.5 py-0.5 rounded-full shadow-xs z-10 whitespace-nowrap">
-          SUB
-        </span>
-      )}
-
-      {/* Photo Container */}
-      <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0 mt-1 flex items-center justify-center">
-        {person.photo_url ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={person.photo_url}
-            alt={person.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="text-slate-400 text-lg">👤</div>
+    <div style={{ width: 152, height: 170, flexShrink: 0 }} className="relative">
+      <div
+        className="absolute inset-0 rounded-xl bg-white flex flex-col items-center"
+        style={{
+          boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
+          border: `2px solid ${accentColor}`,
+        }}
+      >
+        {/* Badges */}
+        {highlight && (
+          <span
+            className="absolute top-1.5 right-1.5 z-10 text-[0.48rem] font-black uppercase px-1.5 py-0.5 rounded-full leading-none"
+            style={{ background: "#B8860B", color: "#fff" }}
+          >
+            ⭐ Chair
+          </span>
         )}
-      </div>
+        {isSubstitute && !highlight && (
+          <span className="absolute top-1.5 right-1.5 z-10 bg-amber-500 text-white text-[0.48rem] font-bold uppercase px-1.5 py-0.5 rounded-full leading-none">
+            SUB
+          </span>
+        )}
 
-      {/* Text Info */}
-      <div className="flex flex-col items-center mt-1.5 w-full">
-        {/* Single-line Name */}
-        <div className="font-extrabold text-slate-800 text-[0.75rem] leading-snug whitespace-nowrap overflow-hidden text-ellipsis max-w-full px-1">
-          {person.name}
+        {/* Circle photo — large, centered */}
+        <div
+          className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
+          style={{
+            width: 80,
+            height: 80,
+            marginTop: 14,
+            border: `2.5px solid ${accentColor}`,
+            background: "#f1f5f9",
+          }}
+        >
+          {person.photo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={person.photo_url}
+              alt={person.name}
+              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
+            />
+          ) : (
+            <div style={{ fontSize: "2rem" }} className="select-none">👤</div>
+          )}
         </div>
 
-        {/* Teaching / Admin Position */}
-        <div className="text-[0.65rem] text-slate-600 font-medium leading-tight mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-full px-1">
-          {positionTitle}
-        </div>
-
-        {/* Substitute Expiry */}
-        {isSubstitute && (
-          <div className="mt-1 text-[0.55rem] text-amber-800 bg-amber-100/70 px-1 py-0.5 rounded border border-amber-200 whitespace-nowrap">
-            Until {formatSubDate(person.sub_expiry_end)}
+        {/* Text block */}
+        <div className="flex flex-col items-center text-center px-2 mt-2" style={{ width: "100%" }}>
+          {/* Name */}
+          <div
+            className="font-extrabold leading-tight w-full"
+            style={{
+              fontSize: "0.68rem",
+              color: "#1e293b",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {person.name}
           </div>
-        )}
+
+          {/* Position title */}
+          <div
+            className="font-semibold leading-tight mt-0.5 w-full"
+            style={{
+              fontSize: "0.58rem",
+              color: accentColor,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {positionTitle}
+          </div>
+
+          {/* Role label — teaching only */}
+          {roleLabel && (
+            <div
+              className="leading-tight mt-0.5 w-full truncate"
+              style={{ fontSize: "0.52rem", color: "#64748b" }}
+            >
+              {roleLabel}
+            </div>
+          )}
+
+          {/* Substitute expiry */}
+          {isSubstitute && (
+            <div
+              className="mt-1 w-full text-center truncate rounded px-1 py-0.5"
+              style={{
+                fontSize: "0.47rem",
+                color: "#92400e",
+                background: "rgba(251,191,36,0.15)",
+                border: "1px solid #fcd34d",
+              }}
+            >
+              Until {formatSubDate(person.sub_expiry_end)}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── 6. Main Page ────────────────────────────────────────────────────────────
+// ─── 6. Arrow Connector ───────────────────────────────────────────────────────
+/** Vertical arrow going straight down, used between two stacked cards */
+function ArrowDown({ height = 32 }: { height?: number }) {
+  return (
+    <svg
+      width="20"
+      height={height}
+      viewBox={`0 0 20 ${height}`}
+      className="block mx-auto flex-shrink-0"
+      style={{ overflow: "visible" }}
+    >
+      <defs>
+        <marker
+          id="arrowhead-down"
+          markerWidth="6"
+          markerHeight="6"
+          refX="3"
+          refY="3"
+          orient="auto"
+        >
+          <path d="M0,0 L0,6 L6,3 z" fill="#475569" />
+        </marker>
+      </defs>
+      <line
+        x1="10"
+        y1="0"
+        x2="10"
+        y2={height - 4}
+        stroke="#475569"
+        strokeWidth="1.5"
+        markerEnd="url(#arrowhead-down)"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Branching connector: a vertical stem, a horizontal bar, then downward legs
+ * to N children. Uses an inline SVG sized to exactly span the children.
+ */
+function BranchConnector({
+  childCount,
+  childWidth = 160,
+  gap = 12,
+}: {
+  childCount: number;
+  childWidth?: number;
+  gap?: number;
+}) {
+  if (childCount === 0) return null;
+
+  const totalWidth = childCount * childWidth + (childCount - 1) * gap;
+  const svgH = 40;
+  const stemH = 16; // vertical stem coming down from parent
+  const barY = stemH; // y of horizontal bar
+  const legH = svgH - barY; // height of each downward leg
+
+  // X center of each child
+  const centers = Array.from({ length: childCount }, (_, i) =>
+    i * (childWidth + gap) + childWidth / 2
+  );
+
+  const midX = totalWidth / 2;
+
+  return (
+    <svg
+      width={totalWidth}
+      height={svgH}
+      viewBox={`0 0 ${totalWidth} ${svgH}`}
+      className="block flex-shrink-0"
+      style={{ overflow: "visible" }}
+    >
+      <defs>
+        <marker
+          id="arrowhead-branch"
+          markerWidth="6"
+          markerHeight="6"
+          refX="3"
+          refY="3"
+          orient="auto"
+        >
+          <path d="M0,0 L0,6 L6,3 z" fill="#475569" />
+        </marker>
+      </defs>
+      {/* Vertical stem from parent */}
+      <line
+        x1={midX}
+        y1={0}
+        x2={midX}
+        y2={barY}
+        stroke="#475569"
+        strokeWidth="1.5"
+      />
+      {/* Horizontal bar */}
+      {childCount > 1 && (
+        <line
+          x1={centers[0]}
+          y1={barY}
+          x2={centers[childCount - 1]}
+          y2={barY}
+          stroke="#475569"
+          strokeWidth="1.5"
+        />
+      )}
+      {/* Vertical legs down to each child with arrowhead */}
+      {centers.map((cx, i) => (
+        <line
+          key={i}
+          x1={cx}
+          y1={barY}
+          x2={cx}
+          y2={svgH - 4}
+          stroke="#475569"
+          strokeWidth="1.5"
+          markerEnd="url(#arrowhead-branch)"
+        />
+      ))}
+    </svg>
+  );
+}
+
+// ─── 7. Main Page ────────────────────────────────────────────────────────────
 export default async function DirectoryPage() {
   const allStaff = await getStaff();
 
@@ -174,21 +371,22 @@ export default async function DirectoryPage() {
   const vicePrincipal = sortedAdmin.find(
     (s) =>
       s.id !== principal?.id &&
-      (s.admin_position?.toLowerCase().includes("assistant principal") ||
-        s.admin_position?.toLowerCase().includes("designated assistant"))
+      s.admin_position === "Assistant Principal"
   );
 
   const otherAdmin = sortedAdmin.filter(
     (s) => s.id !== principal?.id && s.id !== vicePrincipal?.id
   );
 
-  const leftAdmin = otherAdmin.filter((_, index) => index % 2 === 0);
-  const rightAdmin = otherAdmin.filter((_, index) => index % 2 !== 0);
-
   const isEmpty = allStaff.length === 0;
+
+  // Card dimensions used for connector math
+  const CARD_W = 160;
+  const CARD_GAP = 12;
 
   return (
     <div className="min-h-screen bg-slate-100 py-8 px-2 md:px-6">
+      {/* Header */}
       <div className="max-w-[1600px] mx-auto text-center mb-8">
         <h1 className="text-2xl md:text-3xl font-black text-[#7B1C1C] uppercase tracking-wider">
           Isabela East Central Elementary School
@@ -207,136 +405,158 @@ export default async function DirectoryPage() {
           </div>
         ) : (
           <div className="space-y-10">
-            {/* 1. Administration Hierarchy Tree */}
+            {/* ── 1. Administration Hierarchy ─────────────────────────────── */}
             {sortedAdmin.length > 0 && (
               <section className="flex flex-col items-center">
+                {/* Principal */}
                 {principal && (
-                  <div className="relative min-w-[180px]">
+                  <div className="flex flex-col items-center">
                     <StaffCard person={principal} />
-                    <div className="w-0.5 h-6 bg-slate-700 mx-auto" />
+                    {(vicePrincipal || otherAdmin.length > 0) && (
+                      <ArrowDown height={32} />
+                    )}
                   </div>
                 )}
 
+                {/* Vice / Designated AP */}
                 {vicePrincipal && (
-                  <div className="relative min-w-[180px]">
+                  <div className="flex flex-col items-center">
                     <StaffCard person={vicePrincipal} />
+                    {otherAdmin.length > 0 && <ArrowDown height={32} />}
                   </div>
                 )}
 
+                {/* Other Admin — horizontal row with branching arrows */}
                 {otherAdmin.length > 0 && (
-                  <div className="relative flex flex-col items-center w-full max-w-3xl mt-0">
-                    <div className="w-0.5 h-6 bg-slate-700" />
-                    <div className="relative w-full flex flex-col items-center">
-                      <div className="absolute top-0 bottom-0 w-0.5 bg-slate-700 left-1/2 -translate-x-1/2" />
-                      <div className="w-full space-y-4 py-2">
-                        {Array.from({
-                          length: Math.max(leftAdmin.length, rightAdmin.length),
-                        }).map((_, i) => (
-                          <div
-                            key={i}
-                            className="flex justify-between items-center w-full relative"
-                          >
-                            <div className="w-[45%] flex justify-end items-center relative">
-                              {leftAdmin[i] ? (
-                                <>
-                                  <div className="min-w-[180px]">
-                                    <StaffCard person={leftAdmin[i]} />
-                                  </div>
-                                  <div className="h-0.5 bg-slate-700 flex-1 ml-2" />
-                                </>
-                              ) : (
-                                <div />
-                              )}
-                            </div>
-
-                            <div className="w-[45%] flex justify-start items-center relative">
-                              {rightAdmin[i] ? (
-                                <>
-                                  <div className="h-0.5 bg-slate-700 flex-1 mr-2" />
-                                  <div className="min-w-[180px]">
-                                    <StaffCard person={rightAdmin[i]} />
-                                  </div>
-                                </>
-                              ) : (
-                                <div />
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                  <div className="flex flex-col items-center">
+                    <BranchConnector
+                      childCount={otherAdmin.length}
+                      childWidth={CARD_W}
+                      gap={CARD_GAP}
+                    />
+                    <div
+                      className="flex"
+                      style={{ gap: CARD_GAP }}
+                    >
+                      {otherAdmin.map((person) => (
+                        <StaffCard key={person.id} person={person} />
+                      ))}
                     </div>
                   </div>
                 )}
               </section>
             )}
 
-            {/* 2. Single-Row Teaching Force Layout */}
+            {/* ── 2. Teaching Force ────────────────────────────────────────── */}
             {teachingStaff.length > 0 && (
               <section className="pt-6 border-t-2 border-slate-300 overflow-x-auto">
                 <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide mb-6">
                   Teaching Force
                 </h2>
 
-                <div className="grid grid-cols-8 gap-3 min-w-[1300px] bg-white p-4 rounded-xl border border-slate-300">
-                  {GRADE_LEVELS.map((gl) => {
-                    const gradeTeachers = teachingStaff.filter(
-                      (t) => t.grade_level === gl
-                    );
+                <div
+                  className="bg-white p-4 rounded-xl border border-slate-300"
+                  style={{ minWidth: 1300 }}
+                >
+                  {/* Grade columns */}
+                  <div className="grid grid-cols-8 gap-3">
+                    {GRADE_LEVELS.map((gl) => {
+                      const gradeTeachers = teachingStaff.filter(
+                        (t) => t.grade_level === gl
+                      );
+                      const chairman = gradeTeachers.find(
+                        (t) => t.is_grade_chairman
+                      );
+                      const others = gradeTeachers.filter(
+                        (t) => t.id !== chairman?.id
+                      );
 
-                    const chairman = gradeTeachers.find(
-                      (t) => t.is_grade_chairman
-                    );
-                    const others = gradeTeachers.filter(
-                      (t) => t.id !== chairman?.id
-                    );
+                      return (
+                        <div
+                          key={gl}
+                          className="flex flex-col items-center border-r last:border-r-0 border-slate-200 px-1"
+                        >
+                          {/* Grade header */}
+                          <div className="w-full text-center py-1 px-1 bg-[#7B1C1C] text-white font-black text-[0.7rem] uppercase rounded mb-3 whitespace-nowrap">
+                            {gl}
+                          </div>
 
-                    return (
-                      <div
-                        key={gl}
-                        className="flex flex-col items-center border-r last:border-r-0 border-slate-200 px-1"
-                      >
-                        {/* Grade Header */}
-                        <div className="w-full text-center py-1 px-1 bg-[#7B1C1C] text-white font-black text-[0.7rem] uppercase rounded mb-3 whitespace-nowrap">
-                          {gl}
+                          {/* Teachers in this grade */}
+                          <div className="flex flex-col items-center w-full gap-0">
+                            {gradeTeachers.length === 0 && (
+                              <div className="text-[0.65rem] text-slate-400 text-center italic py-4 whitespace-nowrap">
+                                Unassigned
+                              </div>
+                            )}
+
+                            {/* Chairman */}
+                            {chairman && (
+                              <div className="flex flex-col items-center">
+                                <StaffCard person={chairman} highlight={true} />
+                                {others.length > 0 && (
+                                  <>
+                                    {others.length === 1 ? (
+                                      <ArrowDown height={28} />
+                                    ) : (
+                                      <BranchConnector
+                                        childCount={others.length}
+                                        childWidth={CARD_W}
+                                        gap={CARD_GAP}
+                                      />
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            )}
+
+                            {/* If no chairman, show all teachers in a column */}
+                            {!chairman && others.length === 0 && null}
+
+                            {/* Regular teachers */}
+                            {chairman && others.length > 0 ? (
+                              // With chairman: display others in a flex row below the branch
+                              <div
+                                className="flex"
+                                style={{ gap: CARD_GAP }}
+                              >
+                                {others.map((person) => (
+                                  <StaffCard key={person.id} person={person} />
+                                ))}
+                              </div>
+                            ) : (
+                              // No chairman: stack vertically with arrows
+                              others.map((person, idx) => (
+                                <div
+                                  key={person.id}
+                                  className="flex flex-col items-center"
+                                >
+                                  {idx > 0 && <ArrowDown height={24} />}
+                                  <StaffCard person={person} />
+                                </div>
+                              ))
+                            )}
+                          </div>
                         </div>
-
-                        {/* Teachers Column */}
-                        <div className="w-full space-y-3">
-                          {/* Chairman on top */}
-                          {chairman && (
-                            <StaffCard person={chairman} highlight={true} />
-                          )}
-
-                          {/* Regular Teachers below */}
-                          {others.map((person) => (
-                            <StaffCard key={person.id} person={person} />
-                          ))}
-
-                          {gradeTeachers.length === 0 && (
-                            <div className="text-[0.65rem] text-slate-400 text-center italic py-4 whitespace-nowrap">
-                              Unassigned
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </section>
             )}
 
-            {/* 3. Non-Teaching Staff Grid */}
+            {/* ── 3. Non-Teaching Staff ────────────────────────────────────── */}
             {nonTeaching.length > 0 && (
               <section className="space-y-4 pt-6 border-t-2 border-slate-300">
                 <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide">
                   Non-Teaching Staff
                 </h2>
-                <div className="bg-white p-4 rounded-lg border border-slate-300 shadow-xs">
-                  <div className="flex flex-wrap gap-4 justify-center">
+                <div className="bg-white p-4 rounded-lg border border-slate-300 shadow-sm">
+                  <div
+                    className="flex flex-wrap justify-center"
+                    style={{ gap: CARD_GAP }}
+                  >
                     {nonTeaching.map((person) => (
-                      <div key={person.id} className="min-w-[180px]">
-                        <StaffCard person={person} />
-                      </div>
+                      <StaffCard key={person.id} person={person} />
                     ))}
                   </div>
                 </div>
