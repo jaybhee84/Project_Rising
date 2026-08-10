@@ -5,6 +5,9 @@
 
 import { createClient } from "@supabase/supabase-js";
 
+// Disable Next.js route caching so changes from Supabase show instantly
+export const revalidate = 0;
+
 // ─── 1. Interfaces & Types ───────────────────────────────────────────────────
 interface StaffMember {
   id: string;
@@ -280,7 +283,6 @@ function BranchConnector({
   const svgH = 40;
   const stemH = 16; // vertical stem coming down from parent
   const barY = stemH; // y of horizontal bar
-  const legH = svgH - barY; // height of each downward leg
 
   // X center of each child
   const centers = Array.from({ length: childCount }, (_, i) =>
