@@ -11,8 +11,8 @@ export const revalidate = 0;
 // ─── 1. Interfaces & Types ───────────────────────────────────────────────────
 interface StaffMember {
   id: string;
-  family_name: string;
-  first_name: string;
+  family_name?: string;
+  first_name?: string;
   middle_name?: string;
   category: "admin" | "teaching" | "non-teaching" | "job-order";
   admin_position?: string;
@@ -83,12 +83,17 @@ function getMiddleInitial(middleName?: string): string {
 }
 
 /**
- * Formats name as FIRST MIDDLE INITIAL FAMILY NAME
+ * Formats name as FIRST MIDDLE INITIAL FAMILY NAME with safety fallbacks
  */
 function getDisplayName(person: StaffMember): string {
   const family = (person.family_name || "").trim().toUpperCase();
   const first = (person.first_name || "").trim().toUpperCase();
   const middleInit = getMiddleInitial(person.middle_name);
+
+  // Fallback if one of the fields is missing
+  if (!first && !family) return "UNNAMED STAFF";
+  if (!first) return family;
+  if (!family) return first;
 
   return `${first}${middleInit ? " " + middleInit : ""} ${family}`.trim();
 }
@@ -122,7 +127,7 @@ function StaffCard({
   const positionTitle =
     person.category === "admin"
       ? person.is_designated
-        ? `Designated ${person.admin_position}`
+        ? `Designated ${person.admin_position || ""}`
         : person.admin_position || ""
       : person.category === "teaching"
       ? person.teaching_position || "Teacher I"
