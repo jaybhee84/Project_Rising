@@ -12,6 +12,9 @@ export const revalidate = 0;
 interface StaffMember {
   id: string;
   name: string;
+  family_name?: string;
+  first_name?: string;
+  middle_name?: string;
   category: "admin" | "teaching" | "non-teaching" | "job-order";
   admin_position?: string;
   teaching_position?: string;
@@ -69,6 +72,54 @@ function formatSubDate(iso?: string): string {
   });
 }
 
+/**
+ * Normalizes middle name down to middle initial with period (e.g. "R.")
+ */
+function getMiddleInitial(middleName?: string): string {
+  if (!middleName || !middleName.trim()) return "";
+  const cleaned = middleName.trim().replace(/\./g, "");
+  const firstWord = cleaned.split(/\s+/)[0];
+  if (!firstWord) return "";
+  return `${firstWord.charAt(0).toUpperCase()}.`;
+}
+
+/**
+ * Formats name as FIRST MIDDLE INITIAL FAMILY NAME
+ */
+function getDisplayName(person: StaffMember): string {
+  let family = (person.family_name || "").trim();
+  let first = (person.first_name || "").trim();
+  let middleInit = getMiddleInitial(person.middle_name);
+
+  // Fallback parsing for legacy records
+  if (!first || !family) {
+    const rawName = person.name || "";
+    if (rawName.includes(",")) {
+      // Legacy format: "FAMILY, FIRST MIDDLE"
+      const parts = rawName.split(",");
+      family = parts[0].trim();
+      const rest = (parts[1] || "").trim().split(/\s+/);
+      first = rest[0] || "";
+      middleInit = getMiddleInitial(rest.slice(1).join(" "));
+    } else {
+      // Format: "FIRST MIDDLE FAMILY"
+      const parts = rawName.trim().split(/\s+/);
+      if (parts.length === 1) {
+        first = parts[0];
+      } else if (parts.length === 2) {
+        first = parts[0];
+        family = parts[1];
+      } else if (parts.length > 2) {
+        first = parts[0];
+        middleInit = getMiddleInitial(parts.slice(1, -1).join(" "));
+        family = parts[parts.length - 1];
+      }
+    }
+  }
+
+  return `${first.toUpperCase()}${middleInit ? " " + middleInit : ""} ${family.toUpperCase()}`.trim();
+}
+
 // ─── 4. Data Fetching ────────────────────────────────────────────────────────
 async function getStaff(): Promise<StaffMember[]> {
   const supabase = createClient(
@@ -85,11 +136,6 @@ async function getStaff(): Promise<StaffMember[]> {
 }
 
 // ─── 5. Staff Card Component ──────────────────────────────────────────────────
-/**
- * Fixed-size card: 152px × 170px.
- * White background, subtle shadow, maroon left-border accent.
- * Large circle photo (80px) centered near the top; text below.
- */
 function StaffCard({
   person,
   highlight = false,
@@ -98,10 +144,8 @@ function StaffCard({
   highlight?: boolean;
 }) {
   const isSubstitute = person.status === "substitute";
+  const displayName = getDisplayName(person);
 
-  // Admin: show "Designated X" if is_designated, else admin_position
-  // Teaching: positionTitle = DepEd rank (Teacher VI, Master Teacher II…)
-  //           roleLabel     = teaching_type (Adviser / Subject Teacher)
   const positionTitle =
     person.category === "admin"
       ? person.is_designated
@@ -111,7 +155,6 @@ function StaffCard({
       ? person.teaching_position || "Teacher I"
       : person.admin_position || "";
 
-  // For teaching: show teaching_type directly (Adviser / Subject Teacher)
   const roleLabel =
     person.category === "teaching"
       ? person.teaching_type || null
@@ -143,7 +186,7 @@ function StaffCard({
           </span>
         )}
 
-        {/* Circle photo — large, centered */}
+        {/* Circle photo */}
         <div
           className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
           style={{
@@ -158,7 +201,7 @@ function StaffCard({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={person.photo_url}
-              alt={person.name}
+              alt={displayName}
               style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
             />
           ) : (
@@ -180,7 +223,7 @@ function StaffCard({
               overflow: "hidden",
             }}
           >
-            {person.name}
+            {displayName}
           </div>
 
           {/* Position title */}
@@ -198,7 +241,7 @@ function StaffCard({
             {positionTitle}
           </div>
 
-          {/* Role label — teaching only */}
+          {/* Role label */}
           {roleLabel && (
             <div
               className="leading-tight mt-0.5 w-full truncate"
@@ -229,7 +272,6 @@ function StaffCard({
 }
 
 // ─── 6. Arrow Connector ───────────────────────────────────────────────────────
-/** Vertical arrow going straight down, used between two stacked cards */
 function ArrowDown({ height = 32 }: { height?: number }) {
   return (
     <svg
@@ -264,10 +306,6 @@ function ArrowDown({ height = 32 }: { height?: number }) {
   );
 }
 
-/**
- * Branching connector: a vertical stem, a horizontal bar, then downward legs
- * to N children. Uses an inline SVG sized to exactly span the children.
- */
 function BranchConnector({
   childCount,
   childWidth = 160,
@@ -281,10 +319,9 @@ function BranchConnector({
 
   const totalWidth = childCount * childWidth + (childCount - 1) * gap;
   const svgH = 40;
-  const stemH = 16; // vertical stem coming down from parent
-  const barY = stemH; // y of horizontal bar
+  const stemH = 16;
+  const barY = stemH;
 
-  // X center of each child
   const centers = Array.from({ length: childCount }, (_, i) =>
     i * (childWidth + gap) + childWidth / 2
   );
@@ -311,7 +348,6 @@ function BranchConnector({
           <path d="M0,0 L0,6 L6,3 z" fill="#475569" />
         </marker>
       </defs>
-      {/* Vertical stem from parent */}
       <line
         x1={midX}
         y1={0}
@@ -320,7 +356,6 @@ function BranchConnector({
         stroke="#475569"
         strokeWidth="1.5"
       />
-      {/* Horizontal bar */}
       {childCount > 1 && (
         <line
           x1={centers[0]}
@@ -331,7 +366,6 @@ function BranchConnector({
           strokeWidth="1.5"
         />
       )}
-      {/* Vertical legs down to each child with arrowhead */}
       {centers.map((cx, i) => (
         <line
           key={i}
@@ -382,7 +416,6 @@ export default async function DirectoryPage() {
 
   const isEmpty = allStaff.length === 0;
 
-  // Card dimensions used for connector math
   const CARD_W = 160;
   const CARD_GAP = 12;
 
@@ -407,10 +440,9 @@ export default async function DirectoryPage() {
           </div>
         ) : (
           <div className="space-y-10">
-            {/* ── 1. Administration Hierarchy ─────────────────────────────── */}
+            {/* 1. Administration Hierarchy */}
             {sortedAdmin.length > 0 && (
               <section className="flex flex-col items-center">
-                {/* Principal */}
                 {principal && (
                   <div className="flex flex-col items-center">
                     <StaffCard person={principal} />
@@ -420,7 +452,6 @@ export default async function DirectoryPage() {
                   </div>
                 )}
 
-                {/* Vice / Designated AP */}
                 {vicePrincipal && (
                   <div className="flex flex-col items-center">
                     <StaffCard person={vicePrincipal} />
@@ -428,7 +459,6 @@ export default async function DirectoryPage() {
                   </div>
                 )}
 
-                {/* Other Admin — horizontal row with branching arrows */}
                 {otherAdmin.length > 0 && (
                   <div className="flex flex-col items-center">
                     <BranchConnector
@@ -449,7 +479,7 @@ export default async function DirectoryPage() {
               </section>
             )}
 
-            {/* ── 2. Teaching Force ────────────────────────────────────────── */}
+            {/* 2. Teaching Force */}
             {teachingStaff.length > 0 && (
               <section className="pt-6 border-t-2 border-slate-300 overflow-x-auto">
                 <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide mb-6">
@@ -460,7 +490,6 @@ export default async function DirectoryPage() {
                   className="bg-white p-4 rounded-xl border border-slate-300"
                   style={{ minWidth: 1300 }}
                 >
-                  {/* Grade columns */}
                   <div className="grid grid-cols-8 gap-3">
                     {GRADE_LEVELS.map((gl) => {
                       const gradeTeachers = teachingStaff.filter(
@@ -478,12 +507,10 @@ export default async function DirectoryPage() {
                           key={gl}
                           className="flex flex-col items-center border-r last:border-r-0 border-slate-200 px-1"
                         >
-                          {/* Grade header */}
                           <div className="w-full text-center py-1 px-1 bg-[#7B1C1C] text-white font-black text-[0.7rem] uppercase rounded mb-3 whitespace-nowrap">
                             {gl}
                           </div>
 
-                          {/* Teachers in this grade */}
                           <div className="flex flex-col items-center w-full gap-0">
                             {gradeTeachers.length === 0 && (
                               <div className="text-[0.65rem] text-slate-400 text-center italic py-4 whitespace-nowrap">
@@ -491,7 +518,6 @@ export default async function DirectoryPage() {
                               </div>
                             )}
 
-                            {/* Chairman */}
                             {chairman && (
                               <div className="flex flex-col items-center">
                                 <StaffCard person={chairman} highlight={true} />
@@ -511,12 +537,7 @@ export default async function DirectoryPage() {
                               </div>
                             )}
 
-                            {/* If no chairman, show all teachers in a column */}
-                            {!chairman && others.length === 0 && null}
-
-                            {/* Regular teachers */}
                             {chairman && others.length > 0 ? (
-                              // With chairman: display others in a flex row below the branch
                               <div
                                 className="flex"
                                 style={{ gap: CARD_GAP }}
@@ -526,7 +547,6 @@ export default async function DirectoryPage() {
                                 ))}
                               </div>
                             ) : (
-                              // No chairman: stack vertically with arrows
                               others.map((person, idx) => (
                                 <div
                                   key={person.id}
@@ -546,7 +566,7 @@ export default async function DirectoryPage() {
               </section>
             )}
 
-            {/* ── 3. Job Order Staff ────────────────────────────────────── */}
+            {/* 3. Job Order Staff */}
             {nonTeaching.length > 0 && (
               <section className="space-y-4 pt-6 border-t-2 border-slate-300">
                 <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide">
