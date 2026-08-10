@@ -11,9 +11,8 @@ export const revalidate = 0;
 // ─── 1. Interfaces & Types ───────────────────────────────────────────────────
 interface StaffMember {
   id: string;
-  name: string;
-  family_name?: string;
-  first_name?: string;
+  family_name: string;
+  first_name: string;
   middle_name?: string;
   category: "admin" | "teaching" | "non-teaching" | "job-order";
   admin_position?: string;
@@ -87,37 +86,11 @@ function getMiddleInitial(middleName?: string): string {
  * Formats name as FIRST MIDDLE INITIAL FAMILY NAME
  */
 function getDisplayName(person: StaffMember): string {
-  let family = (person.family_name || "").trim();
-  let first = (person.first_name || "").trim();
-  let middleInit = getMiddleInitial(person.middle_name);
+  const family = (person.family_name || "").trim().toUpperCase();
+  const first = (person.first_name || "").trim().toUpperCase();
+  const middleInit = getMiddleInitial(person.middle_name);
 
-  // Fallback parsing for legacy records
-  if (!first || !family) {
-    const rawName = person.name || "";
-    if (rawName.includes(",")) {
-      // Legacy format: "FAMILY, FIRST MIDDLE"
-      const parts = rawName.split(",");
-      family = parts[0].trim();
-      const rest = (parts[1] || "").trim().split(/\s+/);
-      first = rest[0] || "";
-      middleInit = getMiddleInitial(rest.slice(1).join(" "));
-    } else {
-      // Format: "FIRST MIDDLE FAMILY"
-      const parts = rawName.trim().split(/\s+/);
-      if (parts.length === 1) {
-        first = parts[0];
-      } else if (parts.length === 2) {
-        first = parts[0];
-        family = parts[1];
-      } else if (parts.length > 2) {
-        first = parts[0];
-        middleInit = getMiddleInitial(parts.slice(1, -1).join(" "));
-        family = parts[parts.length - 1];
-      }
-    }
-  }
-
-  return `${first.toUpperCase()}${middleInit ? " " + middleInit : ""} ${family.toUpperCase()}`.trim();
+  return `${first}${middleInit ? " " + middleInit : ""} ${family}`.trim();
 }
 
 // ─── 4. Data Fetching ────────────────────────────────────────────────────────
