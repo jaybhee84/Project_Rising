@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 
 interface Article {
   id: string | number
+  author?: string
   title: string
   description?: string
   category: string
@@ -373,6 +374,12 @@ export default function ActivitiesPage() {
                     <h3 className="text-xl font-bold text-slate-900 mb-2 leading-snug group-hover:text-rose-900 transition-colors">
                       {item.title}
                     </h3>
+
+                    {item.author && (
+                      <p className="mb-2 text-xs font-semibold text-slate-500">
+                        By {item.author}
+                      </p>
+                    )}
 
                     {item.description && (
                       <p className="text-slate-600 text-sm leading-relaxed line-clamp-3">

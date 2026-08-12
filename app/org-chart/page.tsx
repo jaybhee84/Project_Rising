@@ -98,6 +98,17 @@ function getDisplayName(person: StaffMember): string {
   return `${first}${middleInit ? " " + middleInit : ""} ${family}`.trim();
 }
 
+function normalizedRole(person: StaffMember): string {
+  return `${person.teaching_type || ""} ${person.admin_position || ""}`
+    .trim()
+    .toLowerCase();
+}
+
+function hasRole(person: StaffMember, terms: string[]): boolean {
+  const role = normalizedRole(person);
+  return terms.some((term) => role.includes(term));
+}
+
 // ─── 4. Data Fetching ────────────────────────────────────────────────────────
 async function getStaff(): Promise<StaffMember[]> {
   const supabase = createClient(
@@ -117,26 +128,30 @@ async function getStaff(): Promise<StaffMember[]> {
 function StaffCard({
   person,
   highlight = false,
+  subtitle,
+  positionOverride,
 }: {
   person: StaffMember;
   highlight?: boolean;
+  subtitle?: string;
+  positionOverride?: string;
 }) {
   const isSubstitute = person.status === "substitute";
   const displayName = getDisplayName(person);
 
-  const positionTitle =
-    person.category === "admin"
+  const positionTitle = positionOverride ||
+    (person.category === "admin"
       ? person.is_designated
         ? `Designated ${person.admin_position || ""}`
         : person.admin_position || ""
       : person.category === "teaching"
       ? person.teaching_position || "Teacher I"
-      : person.admin_position || "";
+      : person.admin_position || "");
 
-  const roleLabel =
-    person.category === "teaching"
+  const roleLabel = subtitle ||
+    (person.category === "teaching"
       ? person.teaching_type || null
-      : null;
+      : null);
 
   const accentColor = highlight ? "#B8860B" : isSubstitute ? "#D97706" : "#7B1C1C";
 
@@ -364,9 +379,44 @@ function BranchConnector({
 export default async function DirectoryPage() {
   const allStaff = await getStaff();
 
-  const adminStaff = allStaff.filter((s) => s.category === "admin");
-  const teachingStaff = allStaff.filter((s) => s.category === "teaching");
-  const nonTeaching = allStaff.filter((s) => s.category === "non-teaching" || s.category === "job-order");
+  const substitutes = allStaff.filter((s) => s.status === "substitute");
+  const activeStaff = allStaff.filter((s) => s.status !== "substitute");
+  const districtSupervisor = activeStaff.find((s) =>
+    hasRole(s, ["psds", "public schools district supervisor", "public school district supervisor"])
+  );
+  const alsCoordinators = activeStaff.filter((s) =>
+    hasRole(s, ["als coordinator", "alternative learning system coordinator"])
+  );
+  const adminStaff = activeStaff.filter(
+    (s) =>
+      s.category === "admin" &&
+      s.id !== districtSupervisor?.id &&
+      !alsCoordinators.some((p) => p.id === s.id)
+  );
+  const teachingStaff = activeStaff.filter(
+    (s) =>
+      s.category === "teaching" &&
+      s.id !== districtSupervisor?.id &&
+      !alsCoordinators.some((p) => p.id === s.id)
+  );
+  const nonTeaching = activeStaff.filter(
+    (s) => s.category === "non-teaching" || s.category === "job-order"
+  );
+
+  const alsTeachers = teachingStaff.filter((s) => hasRole(s, ["als"]));
+  const aliveTeachers = teachingStaff.filter((s) => hasRole(s, ["alive"]));
+  const subjectTeachers = teachingStaff.filter(
+    (s) => !hasRole(s, ["als", "alive"]) && hasRole(s, ["subject"])
+  );
+  const teachingAdvisers = teachingStaff.filter(
+    (s) => !hasRole(s, ["als", "alive", "subject"])
+  );
+  const watchmenAndUtility = nonTeaching.filter((s) =>
+    hasRole(s, ["watchman", "watchmen", "security", "utility", "janitor", "custodian"])
+  );
+  const otherSupport = nonTeaching.filter(
+    (s) => !watchmenAndUtility.some((p) => p.id === s.id)
+  );
 
   const sortedAdmin = [...adminStaff].sort((a, b) => {
     const ai = ADMIN_ORDER.indexOf(a.admin_position || "");
@@ -391,6 +441,14 @@ export default async function DirectoryPage() {
   const otherAdmin = sortedAdmin.filter(
     (s) => s.id !== principal?.id && s.id !== vicePrincipal?.id
   );
+  const primaryAlsCoordinator = alsCoordinators.find(
+    (s) => normalizedRole(s) === "als coordinator"
+  ) || alsCoordinators[0];
+  const supportingAlsCoordinators = alsCoordinators.filter(
+    (s) => s.id !== primaryAlsCoordinator?.id
+  );
+  const leadershipBranchCount = Number(Boolean(vicePrincipal || otherAdmin.length > 0)) +
+    Number(Boolean(primaryAlsCoordinator));
 
   const isEmpty = allStaff.length === 0;
 
@@ -419,38 +477,65 @@ export default async function DirectoryPage() {
         ) : (
           <div className="space-y-10">
             {/* 1. Administration Hierarchy */}
-            {sortedAdmin.length > 0 && (
+            {(districtSupervisor || sortedAdmin.length > 0 || alsCoordinators.length > 0) && (
               <section className="flex flex-col items-center">
+                {districtSupervisor && (
+                  <div className="flex flex-col items-center">
+                    <StaffCard
+                      person={districtSupervisor}
+                      positionOverride="Public Schools District Supervisor (PSDS)"
+                      subtitle="East District I"
+                    />
+                    {(principal || leadershipBranchCount > 0) && <ArrowDown height={32} />}
+                  </div>
+                )}
+
                 {principal && (
                   <div className="flex flex-col items-center">
                     <StaffCard person={principal} />
-                    {(vicePrincipal || otherAdmin.length > 0) && (
-                      <ArrowDown height={32} />
-                    )}
+                    {leadershipBranchCount > 0 && <ArrowDown height={32} />}
                   </div>
                 )}
 
-                {vicePrincipal && (
-                  <div className="flex flex-col items-center">
-                    <StaffCard person={vicePrincipal} />
-                    {otherAdmin.length > 0 && <ArrowDown height={32} />}
-                  </div>
-                )}
-
-                {otherAdmin.length > 0 && (
+                {leadershipBranchCount > 0 && (
                   <div className="flex flex-col items-center">
                     <BranchConnector
-                      childCount={otherAdmin.length}
-                      childWidth={CARD_W}
-                      gap={CARD_GAP}
+                      childCount={leadershipBranchCount}
+                      childWidth={CARD_W + 120}
+                      gap={40}
                     />
-                    <div
-                      className="flex"
-                      style={{ gap: CARD_GAP }}
-                    >
-                      {otherAdmin.map((person) => (
-                        <StaffCard key={person.id} person={person} />
-                      ))}
+                    <div className="flex items-start gap-10">
+                      {(vicePrincipal || otherAdmin.length > 0) && (
+                        <div className="flex min-w-[280px] flex-col items-center">
+                          {vicePrincipal && <StaffCard person={vicePrincipal} />}
+                          {vicePrincipal && otherAdmin.length > 0 && <ArrowDown height={32} />}
+                          {otherAdmin.length > 0 && (
+                            <>
+                              {otherAdmin.length > 1 && (
+                                <BranchConnector childCount={otherAdmin.length} childWidth={CARD_W} gap={CARD_GAP} />
+                              )}
+                              <div className="flex" style={{ gap: CARD_GAP }}>
+                                {otherAdmin.map((person) => <StaffCard key={person.id} person={person} />)}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {primaryAlsCoordinator && (
+                        <div className="flex min-w-[280px] flex-col items-center">
+                          <StaffCard person={primaryAlsCoordinator} />
+                          {supportingAlsCoordinators.length > 0 && <ArrowDown height={32} />}
+                          {supportingAlsCoordinators.length > 1 && (
+                            <BranchConnector childCount={supportingAlsCoordinators.length} childWidth={CARD_W} gap={CARD_GAP} />
+                          )}
+                          <div className="flex" style={{ gap: CARD_GAP }}>
+                            {supportingAlsCoordinators.map((person) => (
+                              <StaffCard key={person.id} person={person} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -459,18 +544,26 @@ export default async function DirectoryPage() {
 
             {/* 2. Teaching Force */}
             {teachingStaff.length > 0 && (
-              <section className="pt-6 border-t-2 border-slate-300 overflow-x-auto">
+              <section className="w-full pt-6 border-t-2 border-slate-300 overflow-x-auto pb-3">
                 <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide mb-6">
                   Teaching Force
                 </h2>
 
-                <div
-                  className="bg-white p-4 rounded-xl border border-slate-300"
-                  style={{ minWidth: 1300 }}
-                >
-                  <div className="grid grid-cols-8 gap-3">
+                <div className="grid w-max grid-cols-[190px_1364px_190px] gap-5 items-start">
+                  <aside className="bg-white p-4 rounded-xl border border-slate-300">
+                    <h3 className="text-center text-sm font-black uppercase text-[#7B1C1C] mb-4">Alternative Learning System (ALS)</h3>
+                    <div className="flex flex-col items-center gap-3">
+                      {alsTeachers.length > 0 ? alsTeachers.map((person) => (
+                        <StaffCard key={person.id} person={person} />
+                      )) : <p className="text-xs italic text-slate-400">Unassigned</p>}
+                    </div>
+                  </aside>
+
+                  <div className="bg-white p-4 rounded-xl border border-slate-300">
+                    <h3 className="text-center text-sm font-black uppercase text-slate-700 mb-4">Teaching Advisers</h3>
+                    <div className="grid grid-cols-[repeat(8,160px)] gap-3">
                     {GRADE_LEVELS.map((gl) => {
-                      const gradeTeachers = teachingStaff.filter(
+                      const gradeTeachers = teachingAdvisers.filter(
                         (t) => t.grade_level === gl
                       );
                       const chairman = gradeTeachers.find(
@@ -483,7 +576,7 @@ export default async function DirectoryPage() {
                       return (
                         <div
                           key={gl}
-                          className="flex flex-col items-center border-r last:border-r-0 border-slate-200 px-1"
+                          className="flex min-w-[160px] flex-col items-center border-r last:border-r-0 border-slate-200 px-1"
                         >
                           <div className="w-full text-center py-1 px-1 bg-[#7B1C1C] text-white font-black text-[0.7rem] uppercase rounded mb-3 whitespace-nowrap">
                             {gl}
@@ -539,25 +632,67 @@ export default async function DirectoryPage() {
                         </div>
                       );
                     })}
+                    </div>
+
+                    {subjectTeachers.length > 0 && (
+                      <div className="mt-8 pt-5 border-t-2 border-slate-200">
+                        <ArrowDown height={28} />
+                        <h3 className="text-center text-sm font-black uppercase text-slate-700 mb-4">Subject Teachers</h3>
+                        <div className="flex flex-wrap justify-center" style={{ gap: CARD_GAP }}>
+                          {subjectTeachers.map((person) => (
+                            <StaffCard key={person.id} person={person} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <aside className="bg-white p-4 rounded-xl border border-slate-300">
+                    <h3 className="text-center text-sm font-black uppercase text-[#7B1C1C] mb-4">ALIVE</h3>
+                    <div className="flex flex-col items-center gap-3">
+                      {aliveTeachers.length > 0 ? aliveTeachers.map((person) => (
+                        <StaffCard key={person.id} person={person} />
+                      )) : <p className="text-xs italic text-slate-400">Unassigned</p>}
+                    </div>
+                  </aside>
+                </div>
+              </section>
+            )}
+
+            {/* 3. Substitute teachers */}
+            {substitutes.length > 0 && (
+              <section className="space-y-4 pt-6 border-t-2 border-slate-300">
+                <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide">
+                  Substitute Teachers
+                </h2>
+                <div className="bg-white p-4 rounded-lg border border-slate-300 shadow-sm">
+                  <div className="flex flex-wrap justify-center" style={{ gap: CARD_GAP }}>
+                    {substitutes.map((person) => (
+                      <StaffCard key={person.id} person={person} />
+                    ))}
                   </div>
                 </div>
               </section>
             )}
 
-            {/* 3. Job Order Staff */}
-            {nonTeaching.length > 0 && (
+            {otherSupport.length > 0 && (
               <section className="space-y-4 pt-6 border-t-2 border-slate-300">
-                <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide">
-                  Job Order Staff
-                </h2>
+                <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide">Support Staff</h2>
                 <div className="bg-white p-4 rounded-lg border border-slate-300 shadow-sm">
-                  <div
-                    className="flex flex-wrap justify-center"
-                    style={{ gap: CARD_GAP }}
-                  >
-                    {nonTeaching.map((person) => (
-                      <StaffCard key={person.id} person={person} />
-                    ))}
+                  <div className="flex flex-wrap justify-center" style={{ gap: CARD_GAP }}>
+                    {otherSupport.map((person) => <StaffCard key={person.id} person={person} />)}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* 4. Watchmen and utility workers stay at the bottom. */}
+            {watchmenAndUtility.length > 0 && (
+              <section className="space-y-4 pt-6 border-t-2 border-slate-300">
+                <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide">Watchmen &amp; Utility Workers</h2>
+                <div className="bg-white p-4 rounded-lg border border-slate-300 shadow-sm">
+                  <div className="flex flex-wrap justify-center" style={{ gap: CARD_GAP }}>
+                    {watchmenAndUtility.map((person) => <StaffCard key={person.id} person={person} />)}
                   </div>
                 </div>
               </section>
