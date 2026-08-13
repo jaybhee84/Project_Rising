@@ -15,7 +15,7 @@ export default function Navbar() {
     { name: 'Enrollment', href: '/enrollment' },
     { name: 'Nutritional Status', href: '/nutritional-status' },
     { name: 'MOOE', href: '/mooe' },
-    { name: 'Org Chart', href: '/org-chart' },
+    { name: 'Organizational Chart', href: '/org-chart' },
   ]
 
   return (

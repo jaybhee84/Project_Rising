@@ -147,6 +147,15 @@ function StaffCard({
       : person.category === "teaching"
       ? person.teaching_position || "Teacher I"
       : person.admin_position || "");
+  const parentheticalStart = positionTitle.indexOf("(");
+  const positionMain =
+    parentheticalStart >= 0
+      ? positionTitle.slice(0, parentheticalStart).trim()
+      : positionTitle;
+  const positionDetails =
+    parentheticalStart >= 0
+      ? positionTitle.slice(parentheticalStart).trim()
+      : "";
 
   const roleLabel = subtitle ||
     (person.category === "teaching"
@@ -156,7 +165,7 @@ function StaffCard({
   const accentColor = highlight ? "#B8860B" : isSubstitute ? "#D97706" : "#7B1C1C";
 
   return (
-    <div style={{ width: 152, height: 170, flexShrink: 0 }} className="relative">
+    <div style={{ width: 200, height: 170, flexShrink: 0 }} className="relative">
       <div
         className="absolute inset-0 rounded-xl bg-white flex flex-col items-center"
         style={{
@@ -207,12 +216,12 @@ function StaffCard({
           {/* Name */}
           <div
             className="font-extrabold leading-tight w-full"
+            title={displayName}
             style={{
               fontSize: "0.68rem",
               color: "#1e293b",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
               overflow: "hidden",
             }}
           >
@@ -231,7 +240,10 @@ function StaffCard({
               overflow: "hidden",
             }}
           >
-            {positionTitle}
+            <span className="block">{positionMain}</span>
+            {positionDetails && (
+              <span className="block">{positionDetails}</span>
+            )}
           </div>
 
           {/* Role label */}
@@ -452,7 +464,7 @@ export default async function DirectoryPage() {
 
   const isEmpty = allStaff.length === 0;
 
-  const CARD_W = 160;
+  const CARD_W = 200;
   const CARD_GAP = 12;
 
   return (
@@ -463,8 +475,11 @@ export default async function DirectoryPage() {
           Isabela East Central Elementary School
         </h1>
         <p className="text-slate-600 font-bold text-sm tracking-wide">
-          SDO Isabela City, Basilan — Organizational Structure
+          SDO Isabela City, Basilan
         </p>
+        <h2 className="mt-5 text-xl md:text-2xl font-black text-slate-800 uppercase tracking-widest">
+          Organizational Structure
+        </h2>
       </div>
 
       <div className="max-w-[1600px] mx-auto">
@@ -549,7 +564,7 @@ export default async function DirectoryPage() {
                   Teaching Force
                 </h2>
 
-                <div className="grid w-max grid-cols-[190px_1364px_190px] gap-5 items-start">
+                <div className="grid w-max grid-cols-[234px_1718px_234px] gap-5 items-start">
                   <aside className="bg-white p-4 rounded-xl border border-slate-300">
                     <h3 className="text-center text-sm font-black uppercase text-[#7B1C1C] mb-4">Alternative Learning System (ALS)</h3>
                     <div className="flex flex-col items-center gap-3">
@@ -561,7 +576,7 @@ export default async function DirectoryPage() {
 
                   <div className="bg-white p-4 rounded-xl border border-slate-300">
                     <h3 className="text-center text-sm font-black uppercase text-slate-700 mb-4">Teaching Advisers</h3>
-                    <div className="grid grid-cols-[repeat(8,160px)] gap-3">
+                    <div className="grid grid-cols-[repeat(8,200px)] gap-3">
                     {GRADE_LEVELS.map((gl) => {
                       const gradeTeachers = teachingAdvisers.filter(
                         (t) => t.grade_level === gl
@@ -576,10 +591,10 @@ export default async function DirectoryPage() {
                       return (
                         <div
                           key={gl}
-                          className="flex min-w-[160px] flex-col items-center border-r last:border-r-0 border-slate-200 px-1"
+                          className="flex min-w-[200px] flex-col items-center border-r last:border-r-0 border-slate-200 px-1"
                         >
                           <div className="w-full text-center py-1 px-1 bg-[#7B1C1C] text-white font-black text-[0.7rem] uppercase rounded mb-3 whitespace-nowrap">
-                            {gl}
+                            {gl === "SPED" ? "SNED" : gl}
                           </div>
 
                           <div className="flex flex-col items-center w-full gap-0">
@@ -592,42 +607,18 @@ export default async function DirectoryPage() {
                             {chairman && (
                               <div className="flex flex-col items-center">
                                 <StaffCard person={chairman} highlight={true} />
-                                {others.length > 0 && (
-                                  <>
-                                    {others.length === 1 ? (
-                                      <ArrowDown height={28} />
-                                    ) : (
-                                      <BranchConnector
-                                        childCount={others.length}
-                                        childWidth={CARD_W}
-                                        gap={CARD_GAP}
-                                      />
-                                    )}
-                                  </>
-                                )}
                               </div>
                             )}
 
-                            {chairman && others.length > 0 ? (
+                            {others.map((person, idx) => (
                               <div
-                                className="flex"
-                                style={{ gap: CARD_GAP }}
+                                key={person.id}
+                                className="flex flex-col items-center"
                               >
-                                {others.map((person) => (
-                                  <StaffCard key={person.id} person={person} />
-                                ))}
+                                {(chairman || idx > 0) && <ArrowDown height={28} />}
+                                <StaffCard person={person} />
                               </div>
-                            ) : (
-                              others.map((person, idx) => (
-                                <div
-                                  key={person.id}
-                                  className="flex flex-col items-center"
-                                >
-                                  {idx > 0 && <ArrowDown height={24} />}
-                                  <StaffCard person={person} />
-                                </div>
-                              ))
-                            )}
+                            ))}
                           </div>
                         </div>
                       );
