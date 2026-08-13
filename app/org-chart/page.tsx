@@ -559,11 +559,12 @@ export default async function DirectoryPage() {
 
             {/* 2. Teaching Force */}
             {teachingStaff.length > 0 && (
-              <section className="w-full pt-6 border-t-2 border-slate-300 overflow-x-auto pb-3">
+              <section className="w-full pt-6 border-t-2 border-slate-300 pb-3">
                 <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide mb-6">
                   Teaching Force
                 </h2>
 
+                <div className="w-full overflow-x-auto pb-3">
                 <div className="grid w-max grid-cols-[234px_1718px_234px] gap-5 items-start">
                   <aside className="bg-white p-4 rounded-xl border border-slate-300">
                     <h3 className="text-center text-sm font-black uppercase text-[#7B1C1C] mb-4">Alternative Learning System (ALS)</h3>
@@ -575,7 +576,6 @@ export default async function DirectoryPage() {
                   </aside>
 
                   <div className="bg-white p-4 rounded-xl border border-slate-300">
-                    <h3 className="text-center text-sm font-black uppercase text-slate-700 mb-4">Teaching Advisers</h3>
                     <div className="grid grid-cols-[repeat(8,200px)] gap-3">
                     {GRADE_LEVELS.map((gl) => {
                       const gradeTeachers = teachingAdvisers.filter(
@@ -646,6 +646,7 @@ export default async function DirectoryPage() {
                       )) : <p className="text-xs italic text-slate-400">Unassigned</p>}
                     </div>
                   </aside>
+                </div>
                 </div>
               </section>
             )}
