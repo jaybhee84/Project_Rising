@@ -119,7 +119,6 @@ export default function Page() {
     fetchPublicRecords();
   }, []);
 
-  // Close lightbox on Escape key
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (!lightboxUrl) return;
@@ -187,33 +186,33 @@ export default function Page() {
   const totalBalance = totalAllocation - totalExpenses;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10">
+    <div className="max-w-7xl mx-auto px-6 py-12 text-gray-900">
       {/* Breadcrumbs */}
-      <div className="mb-6 flex items-center gap-2 text-sm text-gray-500">
-        <a href="/" className="hover:text-blue-600">Home</a>
+      <div className="mb-6 flex items-center gap-2 text-lg text-gray-700 font-semibold">
+        <a href="/" className="hover:text-blue-700 underline">Home</a>
         <span>/</span>
         <span>MOOE Expenses & Liquidation</span>
       </div>
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 pb-6 border-b-2 border-gray-300">
         <div>
-          <h1 className="text-2xl font-black" style={{ color: "var(--deped-blue, #003366)" }}>
+          <h1 className="text-4xl md:text-5xl font-black text-black tracking-tight">
             MOOE Expenses & Liquidation
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-gray-800 text-lg md:text-xl font-medium mt-2">
             Official monthly budget utilization and financial reports
           </p>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-6">
           <div className="flex flex-col">
-            <label className="text-xs font-semibold text-gray-500 mb-1">Calendar Year</label>
+            <label className="text-base font-bold text-gray-900 mb-1">Calendar Year</label>
             <select
               value={selectedCY}
               onChange={(e) => setSelectedCY(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-medium bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-2 border-gray-400 rounded-lg px-4 py-3 text-lg font-bold bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-500"
             >
               <option value="ALL">All Calendar Years</option>
               {availableCYs.map((cy) => (
@@ -222,11 +221,11 @@ export default function Page() {
             </select>
           </div>
           <div className="flex flex-col">
-            <label className="text-xs font-semibold text-gray-500 mb-1">Month</label>
+            <label className="text-base font-bold text-gray-900 mb-1">Month</label>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-medium bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-2 border-gray-400 rounded-lg px-4 py-3 text-lg font-bold bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-500"
             >
               <option value="ALL">All Months</option>
               {MONTHS.map((m) => (
@@ -239,73 +238,73 @@ export default function Page() {
 
       {/* Main Content */}
       {loading ? (
-        <div className="py-20 text-center text-gray-500 text-sm">
+        <div className="py-24 text-center text-gray-800 text-2xl font-bold">
           Loading reports from Supabase...
         </div>
       ) : filteredRecords.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-          <div className="text-4xl mb-3">📊</div>
-          <h2 className="text-base font-bold text-gray-700">No Records Found</h2>
-          <p className="text-gray-500 text-xs max-w-xs mt-1">
+        <div className="flex flex-col items-center justify-center py-20 text-center bg-gray-100 rounded-2xl border-2 border-dashed border-gray-400">
+          <div className="text-6xl mb-4">📊</div>
+          <h2 className="text-2xl font-black text-gray-900">No Records Found</h2>
+          <p className="text-gray-700 text-base max-w-md mt-2 font-medium">
             There are no published MOOE liquidation reports for the selected filters.
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-10">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl border bg-blue-50 border-blue-100">
-              <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Total Allocation</span>
-              <div className="text-xl font-bold text-blue-900 mt-1">₱{fmt(totalAllocation)}</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-6 rounded-2xl border-2 border-blue-200 bg-blue-50/80 shadow-sm">
+              <span className="text-base font-black text-blue-900 uppercase tracking-wide">Total Allocation</span>
+              <div className="text-3xl lg:text-4xl font-black text-blue-950 mt-2">₱{fmt(totalAllocation)}</div>
             </div>
-            <div className="p-4 rounded-xl border bg-amber-50 border-amber-100">
-              <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Total Liquidated</span>
-              <div className="text-xl font-bold text-amber-900 mt-1">₱{fmt(totalExpenses)}</div>
+            <div className="p-6 rounded-2xl border-2 border-amber-200 bg-amber-50/80 shadow-sm">
+              <span className="text-base font-black text-amber-900 uppercase tracking-wide">Total Liquidated</span>
+              <div className="text-3xl lg:text-4xl font-black text-amber-950 mt-2">₱{fmt(totalExpenses)}</div>
             </div>
-            <div className="p-4 rounded-xl border bg-emerald-50 border-emerald-100">
-              <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Unliquidated Balance</span>
-              <div className="text-xl font-bold text-emerald-900 mt-1">₱{fmt(totalBalance)}</div>
+            <div className="p-6 rounded-2xl border-2 border-emerald-200 bg-emerald-50/80 shadow-sm">
+              <span className="text-base font-black text-emerald-900 uppercase tracking-wide">Unliquidated Balance</span>
+              <div className="text-3xl lg:text-4xl font-black text-emerald-950 mt-2">₱{fmt(totalBalance)}</div>
             </div>
           </div>
 
           {/* Records */}
-          <div className="space-y-4">
+          <div className="space-y-8">
             {filteredRecords.map((r, i) => {
               const receipts = r.receipts || [];
               return (
-                <div key={r.id || i} className="bg-white border rounded-xl shadow-sm overflow-hidden">
+                <div key={r.id || i} className="bg-white border-2 border-gray-300 rounded-2xl shadow-md overflow-hidden">
 
-                  {/* Header */}
-                  <div className="p-4 bg-gray-50 border-b flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base font-bold text-gray-800">
+                  {/* High-Contrast Section Header */}
+                  <div className="p-5 bg-gray-100 border-b-2 border-gray-300 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <span className="text-2xl md:text-3xl font-black text-black tracking-tight">
                         {r.month} {r.cy?.replace(/^CY\s*/i, "")}
                       </span>
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-base md:text-lg text-gray-800 font-bold">
                       Liquidated by:{" "}
-                      <b className="text-gray-700">{r.liquidated_by || r.liquidatedBy || "—"}</b>
+                      <span className="text-black font-black underline">{r.liquidated_by || r.liquidatedBy || "—"}</span>
                     </div>
                   </div>
 
-                  {/* Expense Table */}
-                  <div className="p-4 overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                  {/* High-Legibility Expense Table */}
+                  <div className="p-6 overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="border-b text-gray-400 font-semibold uppercase">
-                          <th className="pb-2 w-1/4">Account Code</th>
-                          <th className="pb-2 w-1/2">Account Title</th>
-                          <th className="pb-2 w-1/4 text-right">Amount</th>
+                        <tr className="border-b-2 border-gray-400 text-gray-900 font-black text-sm md:text-base uppercase tracking-wider bg-gray-50">
+                          <th className="py-3 px-3 w-1/4">Account Code</th>
+                          <th className="py-3 px-3 w-1/2">Account Title</th>
+                          <th className="py-3 px-3 w-1/4 text-right">Amount</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y text-gray-700">
+                      <tbody className="divide-y-2 divide-gray-200 text-gray-900 text-base md:text-lg">
                         {(r.items || []).map((item, idx) => {
                           const { code, title } = parseCodeAndTitle(item.objectCode);
                           return (
-                            <tr key={idx} className="hover:bg-gray-50/50">
-                              <td className="py-2.5 font-mono text-gray-800 font-medium">{code}</td>
-                              <td className="py-2.5 text-gray-600">{title}</td>
-                              <td className="py-2.5 text-right font-medium text-gray-900">₱{fmt(item.amount)}</td>
+                            <tr key={idx} className="hover:bg-yellow-50/50 transition-colors">
+                              <td className="py-4 px-3 font-mono font-bold text-gray-900">{code}</td>
+                              <td className="py-4 px-3 text-gray-900 font-semibold">{title}</td>
+                              <td className="py-4 px-3 text-right font-black text-black">₱{fmt(item.amount)}</td>
                             </tr>
                           );
                         })}
@@ -313,25 +312,25 @@ export default function Page() {
                     </table>
                   </div>
 
-                  {/* Footer Totals */}
-                  <div className="px-4 py-3 bg-gray-50/50 border-t flex flex-wrap items-center justify-between text-xs font-medium text-gray-600">
-                    <div>Allocation: <b>₱{fmt(r.allocation)}</b></div>
-                    <div>Expenses: <b className="text-amber-700">₱{fmt(r.total)}</b></div>
-                    <div>Balance: <b className="text-emerald-700">₱{fmt(r.balance)}</b></div>
+                  {/* Clear Summary Footer */}
+                  <div className="px-6 py-4 bg-gray-100 border-t-2 border-gray-300 flex flex-wrap items-center justify-between text-base md:text-lg font-black text-gray-900 gap-3">
+                    <div>Allocation: <span className="text-black">₱{fmt(r.allocation)}</span></div>
+                    <div>Expenses: <span className="text-amber-900">₱{fmt(r.total)}</span></div>
+                    <div>Balance: <span className="text-emerald-900">₱{fmt(r.balance)}</span></div>
                   </div>
 
-                  {/* ── RECEIPTS SECTION ── */}
+                  {/* Receipts Section */}
                   {receipts.length > 0 && (
-                    <div className="px-4 py-3 border-t bg-gray-50/30">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    <div className="px-6 py-5 border-t-2 border-gray-300 bg-gray-50">
+                      <p className="text-base font-black text-gray-900 uppercase tracking-wider mb-4">
                         📎 Supporting Documents / Receipts ({receipts.length})
                       </p>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-4">
                         {receipts.map((rec, idx) => (
                           <button
                             key={idx}
                             onClick={() => openLightbox(receipts, idx)}
-                            className="relative group w-16 h-16 rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 transition-all shadow-sm hover:shadow-md focus:outline-none"
+                            className="relative group w-24 h-24 rounded-xl overflow-hidden border-2 border-gray-400 hover:border-blue-600 transition-all shadow-md focus:outline-none focus:ring-4 focus:ring-blue-500"
                             title={`View receipt ${idx + 1}`}
                           >
                             <img
@@ -339,9 +338,8 @@ export default function Page() {
                               alt={`Receipt ${idx + 1}`}
                               className="w-full h-full object-cover"
                             />
-                            {/* Hover overlay */}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
-                              <span className="text-white text-lg opacity-0 group-hover:opacity-100 transition-opacity">🔍</span>
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center">
+                              <span className="text-white text-2xl font-bold opacity-0 group-hover:opacity-100 transition-opacity">🔍</span>
                             </div>
                           </button>
                         ))}
@@ -355,73 +353,52 @@ export default function Page() {
         </div>
       )}
 
-      {/* ── LIGHTBOX ── */}
+      {/* Lightbox Modal */}
       {lightboxUrl && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6"
           onClick={closeLightbox}
         >
           <div
-            className="relative max-w-4xl w-full flex flex-col items-center"
+            className="relative max-w-5xl w-full flex flex-col items-center"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close */}
             <button
               onClick={closeLightbox}
-              className="absolute -top-10 right-0 text-white text-2xl font-bold hover:text-gray-300 transition-colors"
+              className="absolute -top-12 right-0 text-white text-4xl font-black hover:text-red-400 transition-colors"
               title="Close (Esc)"
             >
               ✕
             </button>
 
-            {/* Image */}
             <img
               src={lightboxUrl}
               alt="Receipt"
-              className="max-h-[80vh] max-w-full rounded-xl shadow-2xl object-contain"
+              className="max-h-[75vh] max-w-full rounded-xl shadow-2xl object-contain border-2 border-white"
             />
 
-            {/* Counter */}
             {lightboxList.length > 1 && (
-              <div className="mt-3 text-white text-sm font-medium opacity-80">
+              <div className="mt-4 text-white text-xl font-black">
                 {lightboxIndex + 1} / {lightboxList.length}
               </div>
             )}
 
-            {/* Prev / Next */}
             {lightboxList.length > 1 && (
-              <div className="flex gap-4 mt-3">
+              <div className="flex gap-6 mt-4">
                 <button
                   onClick={() => navigateLightbox(-1)}
                   disabled={lightboxIndex === 0}
-                  className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="px-6 py-3 bg-white text-black hover:bg-gray-200 rounded-xl text-lg font-black disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  ← Prev
+                  ← Previous
                 </button>
                 <button
                   onClick={() => navigateLightbox(1)}
                   disabled={lightboxIndex === lightboxList.length - 1}
-                  className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="px-6 py-3 bg-white text-black hover:bg-gray-200 rounded-xl text-lg font-black disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   Next →
                 </button>
-              </div>
-            )}
-
-            {/* Thumbnail strip */}
-            {lightboxList.length > 1 && (
-              <div className="flex gap-2 mt-4 flex-wrap justify-center">
-                {lightboxList.map((rec, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => { setLightboxIndex(idx); setLightboxUrl(rec.url); }}
-                    className={`w-12 h-12 rounded-md overflow-hidden border-2 transition-all ${
-                      idx === lightboxIndex ? "border-white scale-110" : "border-white/30 hover:border-white/60"
-                    }`}
-                  >
-                    <img src={rec.url} alt={`thumb ${idx + 1}`} className="w-full h-full object-cover" />
-                  </button>
-                ))}
               </div>
             )}
           </div>

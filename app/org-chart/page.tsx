@@ -3,12 +3,69 @@
  * Public org chart page for IECES Project Rising website.
  */
 
+"use client";
+
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-// Disable Next.js route caching so changes from Supabase show instantly
-export const revalidate = 0;
+// ─── 1. Custom Hook for Click-and-Drag Scrolling ─────────────────────────────
+function useDraggable<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  const isDraggingRef = useRef(false);
 
-// ─── 1. Interfaces & Types ───────────────────────────────────────────────────
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      isDown = true;
+      isDraggingRef.current = false;
+      startX = e.pageX - el.offsetLeft;
+      scrollLeft = el.scrollLeft;
+    };
+
+    const handleMouseLeave = () => {
+      isDown = false;
+    };
+
+    const handleMouseUp = () => {
+      isDown = false;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDown) return;
+
+      const x = e.pageX - el.offsetLeft;
+      const walk = (x - startX) * 1.5;
+
+      if (Math.abs(walk) > 5) {
+        isDraggingRef.current = true;
+        e.preventDefault();
+        el.scrollLeft = scrollLeft - walk;
+      }
+    };
+
+    el.addEventListener("mousedown", handleMouseDown);
+    el.addEventListener("mouseleave", handleMouseLeave);
+    el.addEventListener("mouseup", handleMouseUp);
+    el.addEventListener("mousemove", handleMouseMove);
+
+    return () => {
+      el.removeEventListener("mousedown", handleMouseDown);
+      el.removeEventListener("mouseleave", handleMouseLeave);
+      el.removeEventListener("mouseup", handleMouseUp);
+      el.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, []);
+
+  return { ref, isDraggingRef };
+}
+
+// ─── 2. Interfaces & Types ───────────────────────────────────────────────────
 interface StaffMember {
   id: string;
   family_name?: string;
@@ -27,7 +84,7 @@ interface StaffMember {
   photo_url?: string;
 }
 
-// ─── 2. Constants ────────────────────────────────────────────────────────────
+// ─── 3. Constants ────────────────────────────────────────────────────────────
 const ADMIN_ORDER = [
   "Principal",
   "Assistant Principal",
@@ -37,6 +94,8 @@ const ADMIN_ORDER = [
   "Head Teacher IV",
   "Head Teacher V",
   "Head Teacher VI",
+  "ALS Division Focal Person",
+  "Education Program Specialist I (EPS I) ALS",
   "Administrative Officer II (AO II)",
   "Planning & Development Officer I (PDO I)",
   "Administrative Assistant III (Senior Bookkeeper)",
@@ -45,7 +104,7 @@ const ADMIN_ORDER = [
 ];
 
 const GRADE_LEVELS = [
-  "SPED",
+  "SNED",
   "Kinder",
   "Grade 1",
   "Grade 2",
@@ -55,7 +114,7 @@ const GRADE_LEVELS = [
   "Grade 6",
 ];
 
-// ─── 3. Helper Functions ──────────────────────────────────────────────────────
+// ─── 4. Helper Functions ──────────────────────────────────────────────────────
 function isExpired(person: StaffMember): boolean {
   if (person.status !== "substitute" || !person.sub_expiry_end) return false;
   const expiry = new Date(person.sub_expiry_end + "T23:59:59");
@@ -71,9 +130,6 @@ function formatSubDate(iso?: string): string {
   });
 }
 
-/**
- * Normalizes middle name down to middle initial with period (e.g. "R.")
- */
 function getMiddleInitial(middleName?: string): string {
   if (!middleName || !middleName.trim()) return "";
   const cleaned = middleName.trim().replace(/\./g, "");
@@ -82,15 +138,11 @@ function getMiddleInitial(middleName?: string): string {
   return `${firstWord.charAt(0).toUpperCase()}.`;
 }
 
-/**
- * Formats name as FIRST MIDDLE INITIAL FAMILY NAME with safety fallbacks
- */
 function getDisplayName(person: StaffMember): string {
   const family = (person.family_name || "").trim().toUpperCase();
   const first = (person.first_name || "").trim().toUpperCase();
   const middleInit = getMiddleInitial(person.middle_name);
 
-  // Fallback if one of the fields is missing
   if (!first && !family) return "UNNAMED STAFF";
   if (!first) return family;
   if (!family) return first;
@@ -109,37 +161,25 @@ function hasRole(person: StaffMember, terms: string[]): boolean {
   return terms.some((term) => role.includes(term));
 }
 
-// ─── 4. Data Fetching ────────────────────────────────────────────────────────
-async function getStaff(): Promise<StaffMember[]> {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  const { data, error } = await supabase
-    .from("org_chart")
-    .select("*")
-    .order("created_at", { ascending: true });
-
-  if (error || !data) return [];
-  return (data as StaffMember[]).filter((p) => !isExpired(p));
-}
-
 // ─── 5. Staff Card Component ──────────────────────────────────────────────────
 function StaffCard({
   person,
   highlight = false,
   subtitle,
   positionOverride,
+  onClick,
 }: {
   person: StaffMember;
   highlight?: boolean;
   subtitle?: string;
   positionOverride?: string;
+  onClick: () => void;
 }) {
   const isSubstitute = person.status === "substitute";
   const displayName = getDisplayName(person);
 
-  const positionTitle = positionOverride ||
+  const positionTitle =
+    positionOverride ||
     (person.category === "admin"
       ? person.is_designated
         ? `Designated ${person.admin_position || ""}`
@@ -147,55 +187,52 @@ function StaffCard({
       : person.category === "teaching"
       ? person.teaching_position || "Teacher I"
       : person.admin_position || "");
-  const parentheticalStart = positionTitle.indexOf("(");
-  const positionMain =
-    parentheticalStart >= 0
-      ? positionTitle.slice(0, parentheticalStart).trim()
-      : positionTitle;
-  const positionDetails =
-    parentheticalStart >= 0
-      ? positionTitle.slice(parentheticalStart).trim()
-      : "";
 
-  const roleLabel = subtitle ||
-    (person.category === "teaching"
-      ? person.teaching_type || null
-      : null);
+  const roleLabel =
+    subtitle ||
+    (person.category === "teaching" ? person.teaching_type || null : null);
 
-  const accentColor = highlight ? "#B8860B" : isSubstitute ? "#D97706" : "#7B1C1C";
+  const borderAccent = highlight ? "#D97706" : isSubstitute ? "#D97706" : "#7B1C1C";
+  const titleAccent = highlight ? "#B45309" : isSubstitute ? "#B45309" : "#7B1C1C";
 
   return (
-    <div style={{ width: 200, height: 170, flexShrink: 0 }} className="relative">
+    <div
+      style={{ width: 152, height: 170, flexShrink: 0 }}
+      className="relative z-10 hover:z-50 cursor-pointer group select-none pointer-events-auto"
+      onClick={onClick}
+    >
       <div
-        className="absolute inset-0 rounded-xl bg-white flex flex-col items-center"
+        className="absolute inset-0 rounded-xl bg-white flex flex-col items-center transition-all duration-300 ease-out group-hover:scale-125 group-hover:-translate-y-2 group-hover:shadow-2xl transform-gpu will-change-transform"
         style={{
-          boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
-          border: `2px solid ${accentColor}`,
+          boxShadow: "0 8px 20px rgba(0,0,0,0.4)",
+          border: `2.5px solid ${borderAccent}`,
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
         }}
       >
         {/* Badges */}
         {highlight && (
           <span
-            className="absolute top-1.5 right-1.5 z-10 text-[0.48rem] font-black uppercase px-1.5 py-0.5 rounded-full leading-none"
-            style={{ background: "#B8860B", color: "#fff" }}
+            className="absolute top-1.5 right-1.5 z-10 text-[0.48rem] font-black uppercase px-1.5 py-0.5 rounded-full leading-none shadow-md"
+            style={{ background: "#D97706", color: "#ffffff" }}
           >
             ⭐ Chair
           </span>
         )}
         {isSubstitute && !highlight && (
-          <span className="absolute top-1.5 right-1.5 z-10 bg-amber-500 text-white text-[0.48rem] font-bold uppercase px-1.5 py-0.5 rounded-full leading-none">
+          <span className="absolute top-1.5 right-1.5 z-10 bg-amber-600 text-white text-[0.48rem] font-black uppercase px-1.5 py-0.5 rounded-full leading-none shadow-md">
             SUB
           </span>
         )}
 
         {/* Circle photo */}
         <div
-          className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
+          className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center transition-transform duration-300 group-hover:scale-105"
           style={{
             width: 80,
             height: 80,
             marginTop: 14,
-            border: `2.5px solid ${accentColor}`,
+            border: `2.5px solid ${borderAccent}`,
             background: "#f1f5f9",
           }}
         >
@@ -204,67 +241,71 @@ function StaffCard({
             <img
               src={person.photo_url}
               alt={displayName}
-              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
+              draggable={false}
+              className="pointer-events-none select-none"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center top",
+              }}
             />
           ) : (
-            <div style={{ fontSize: "2rem" }} className="select-none">👤</div>
+            <div style={{ fontSize: "2rem" }} className="select-none">
+              👤
+            </div>
           )}
         </div>
 
         {/* Text block */}
-        <div className="flex flex-col items-center text-center px-2 mt-2" style={{ width: "100%" }}>
-          {/* Name */}
+        <div
+          className="flex flex-col items-center text-center px-2 mt-2 select-none"
+          style={{ width: "100%" }}
+        >
           <div
-            className="font-extrabold leading-tight w-full"
-            title={displayName}
+            className="font-black leading-tight w-full text-slate-900"
             style={{
               fontSize: "0.68rem",
-              color: "#1e293b",
-              whiteSpace: "nowrap",
-              textOverflow: "ellipsis",
-              overflow: "hidden",
-            }}
-          >
-            {displayName}
-          </div>
-
-          {/* Position title */}
-          <div
-            className="font-semibold leading-tight mt-0.5 w-full"
-            style={{
-              fontSize: "0.58rem",
-              color: accentColor,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
               overflow: "hidden",
             }}
           >
-            <span className="block">{positionMain}</span>
-            {positionDetails && (
-              <span className="block">{positionDetails}</span>
-            )}
+            {displayName}
           </div>
 
-          {/* Role label */}
+          <div
+            className="font-black leading-tight mt-0.5 w-full"
+            style={{
+              fontSize: "0.58rem",
+              color: titleAccent,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {positionTitle}
+          </div>
+
           {roleLabel && (
             <div
-              className="leading-tight mt-0.5 w-full truncate"
-              style={{ fontSize: "0.52rem", color: "#64748b" }}
+              className="font-bold leading-tight mt-0.5 w-full truncate text-slate-600"
+              style={{ fontSize: "0.52rem" }}
             >
               {roleLabel}
             </div>
           )}
 
-          {/* Substitute expiry */}
           {isSubstitute && (
             <div
-              className="mt-1 w-full text-center truncate rounded px-1 py-0.5"
+              className="mt-1 w-full text-center truncate rounded px-1 py-0.5 font-extrabold"
               style={{
                 fontSize: "0.47rem",
-                color: "#92400e",
-                background: "rgba(251,191,36,0.15)",
-                border: "1px solid #fcd34d",
+                color: "#78350f",
+                background: "#fef3c7",
+                border: "1px solid #f59e0b",
               }}
             >
               Until {formatSubDate(person.sub_expiry_end)}
@@ -276,128 +317,149 @@ function StaffCard({
   );
 }
 
-// ─── 6. Arrow Connector ───────────────────────────────────────────────────────
-function ArrowDown({ height = 32 }: { height?: number }) {
-  return (
-    <svg
-      width="20"
-      height={height}
-      viewBox={`0 0 20 ${height}`}
-      className="block mx-auto flex-shrink-0"
-      style={{ overflow: "visible" }}
-    >
-      <defs>
-        <marker
-          id="arrowhead-down"
-          markerWidth="6"
-          markerHeight="6"
-          refX="3"
-          refY="3"
-          orient="auto"
-        >
-          <path d="M0,0 L0,6 L6,3 z" fill="#475569" />
-        </marker>
-      </defs>
-      <line
-        x1="10"
-        y1="0"
-        x2="10"
-        y2={height - 4}
-        stroke="#475569"
-        strokeWidth="1.5"
-        markerEnd="url(#arrowhead-down)"
-      />
-    </svg>
-  );
-}
-
-function BranchConnector({
-  childCount,
-  childWidth = 160,
-  gap = 12,
+// ─── 6. Full Screen View Modal ───────────────────────────────────────────────
+function FullScreenModal({
+  person,
+  onClose,
 }: {
-  childCount: number;
-  childWidth?: number;
-  gap?: number;
+  person: StaffMember;
+  onClose: () => void;
 }) {
-  if (childCount === 0) return null;
+  const displayName = getDisplayName(person);
+  const isSubstitute = person.status === "substitute";
 
-  const totalWidth = childCount * childWidth + (childCount - 1) * gap;
-  const svgH = 40;
-  const stemH = 16;
-  const barY = stemH;
+  const positionTitle =
+    person.category === "admin"
+      ? person.is_designated
+        ? `Designated ${person.admin_position || ""}`
+        : person.admin_position || ""
+      : person.category === "teaching"
+      ? person.teaching_position || "Teacher I"
+      : person.admin_position || "";
 
-  const centers = Array.from({ length: childCount }, (_, i) =>
-    i * (childWidth + gap) + childWidth / 2
-  );
-
-  const midX = totalWidth / 2;
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   return (
-    <svg
-      width={totalWidth}
-      height={svgH}
-      viewBox={`0 0 ${totalWidth} ${svgH}`}
-      className="block flex-shrink-0"
-      style={{ overflow: "visible" }}
+    <div
+      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn"
+      onClick={onClose}
     >
-      <defs>
-        <marker
-          id="arrowhead-branch"
-          markerWidth="6"
-          markerHeight="6"
-          refX="3"
-          refY="3"
-          orient="auto"
+      <div
+        className="relative bg-white rounded-2xl p-6 md:p-8 max-w-lg w-full flex flex-col items-center text-center shadow-2xl border-4 border-[#D97706]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-500 hover:text-slate-900 text-2xl font-black bg-slate-100 hover:bg-slate-200 w-10 h-10 rounded-full flex items-center justify-center transition"
+          aria-label="Close modal"
         >
-          <path d="M0,0 L0,6 L6,3 z" fill="#475569" />
-        </marker>
-      </defs>
-      <line
-        x1={midX}
-        y1={0}
-        x2={midX}
-        y2={barY}
-        stroke="#475569"
-        strokeWidth="1.5"
-      />
-      {childCount > 1 && (
-        <line
-          x1={centers[0]}
-          y1={barY}
-          x2={centers[childCount - 1]}
-          y2={barY}
-          stroke="#475569"
-          strokeWidth="1.5"
-        />
-      )}
-      {centers.map((cx, i) => (
-        <line
-          key={i}
-          x1={cx}
-          y1={barY}
-          x2={cx}
-          y2={svgH - 4}
-          stroke="#475569"
-          strokeWidth="1.5"
-          markerEnd="url(#arrowhead-branch)"
-        />
-      ))}
-    </svg>
+          ✕
+        </button>
+
+        <div className="w-48 h-48 md:w-64 md:h-64 rounded-full overflow-hidden border-4 border-[#7B1C1C] shadow-xl mb-6 bg-slate-100 flex items-center justify-center">
+          {person.photo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={person.photo_url}
+              alt={displayName}
+              className="w-full h-full object-cover object-top"
+            />
+          ) : (
+            <span className="text-6xl select-none">👤</span>
+          )}
+        </div>
+
+        <h2 className="text-xl md:text-3xl font-black text-slate-900 mb-2">
+          {displayName}
+        </h2>
+
+        <p className="text-lg md:text-xl font-black text-[#7B1C1C] mb-1">
+          {positionTitle}
+        </p>
+
+        {person.teaching_type && (
+          <p className="text-md font-bold text-slate-600 mb-2">
+            {person.teaching_type}
+          </p>
+        )}
+
+        {person.grade_level && (
+          <span className="inline-block bg-slate-200 text-slate-900 font-extrabold px-3 py-1 rounded-full text-sm mb-2 shadow-sm">
+            {person.grade_level}{" "}
+            {person.is_grade_chairman && "• Grade Chairman"}
+          </span>
+        )}
+
+        {isSubstitute && (
+          <div className="mt-2 bg-amber-100 border border-amber-400 text-amber-950 font-black text-xs px-3 py-1 rounded-full">
+            Substitute Teacher (Until {formatSubDate(person.sub_expiry_end)})
+          </div>
+        )}
+
+        <button
+          onClick={onClose}
+          className="mt-6 bg-[#7B1C1C] hover:bg-[#5b1515] text-white font-black py-2.5 px-6 rounded-lg transition text-sm uppercase tracking-wider shadow-md"
+        >
+          Close View (Esc)
+        </button>
+      </div>
+    </div>
   );
 }
 
-// ─── 7. Main Page ────────────────────────────────────────────────────────────
-export default async function DirectoryPage() {
-  const allStaff = await getStaff();
+// ─── 7. Main Page Component ──────────────────────────────────────────────────
+export default function DirectoryPage() {
+  const [allStaff, setAllStaff] = useState<StaffMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+
+  const { ref: scrollRef, isDraggingRef } = useDraggable<HTMLDivElement>();
+
+  const handleCardClick = (person: StaffMember) => {
+    if (!isDraggingRef.current) {
+      setSelectedStaff(person);
+    }
+  };
+
+  useEffect(() => {
+    async function fetchStaff() {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      const { data, error } = await supabase
+        .from("org_chart")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (!error && data) {
+        setAllStaff((data as StaffMember[]).filter((p) => !isExpired(p)));
+      }
+      setLoading(false);
+    }
+    fetchStaff();
+  }, []);
 
   const substitutes = allStaff.filter((s) => s.status === "substitute");
   const activeStaff = allStaff.filter((s) => s.status !== "substitute");
   const districtSupervisor = activeStaff.find((s) =>
-    hasRole(s, ["psds", "public schools district supervisor", "public school district supervisor"])
+    hasRole(s, [
+      "psds",
+      "public schools district supervisor",
+      "public school district supervisor",
+    ])
   );
   const alsCoordinators = activeStaff.filter((s) =>
-    hasRole(s, ["als coordinator", "alternative learning system coordinator"])
+    hasRole(s, [
+      "als coordinator",
+      "alternative learning system coordinator",
+    ])
   );
   const adminStaff = activeStaff.filter(
     (s) =>
@@ -424,7 +486,14 @@ export default async function DirectoryPage() {
     (s) => !hasRole(s, ["als", "alive", "subject"])
   );
   const watchmenAndUtility = nonTeaching.filter((s) =>
-    hasRole(s, ["watchman", "watchmen", "security", "utility", "janitor", "custodian"])
+    hasRole(s, [
+      "watchman",
+      "watchmen",
+      "security",
+      "utility",
+      "janitor",
+      "custodian",
+    ])
   );
   const otherSupport = nonTeaching.filter(
     (s) => !watchmenAndUtility.some((p) => p.id === s.id)
@@ -445,253 +514,366 @@ export default async function DirectoryPage() {
   );
 
   const vicePrincipal = sortedAdmin.find(
-    (s) =>
-      s.id !== principal?.id &&
-      s.admin_position === "Assistant Principal"
+    (s) => s.id !== principal?.id && s.admin_position === "Assistant Principal"
   );
 
   const otherAdmin = sortedAdmin.filter(
     (s) => s.id !== principal?.id && s.id !== vicePrincipal?.id
   );
-  const primaryAlsCoordinator = alsCoordinators.find(
-    (s) => normalizedRole(s) === "als coordinator"
-  ) || alsCoordinators[0];
+  const primaryAlsCoordinator =
+    alsCoordinators.find((s) => normalizedRole(s) === "als coordinator") ||
+    alsCoordinators[0];
   const supportingAlsCoordinators = alsCoordinators.filter(
     (s) => s.id !== primaryAlsCoordinator?.id
   );
-  const leadershipBranchCount = Number(Boolean(vicePrincipal || otherAdmin.length > 0)) +
-    Number(Boolean(primaryAlsCoordinator));
 
   const isEmpty = allStaff.length === 0;
-
-  const CARD_W = 200;
   const CARD_GAP = 12;
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 px-2 md:px-6">
-      {/* Header */}
-      <div className="max-w-[1600px] mx-auto text-center mb-8">
-        <h1 className="text-2xl md:text-3xl font-black text-[#7B1C1C] uppercase tracking-wider">
-          Isabela East Central Elementary School
-        </h1>
-        <p className="text-slate-600 font-bold text-sm tracking-wide">
-          SDO Isabela City, Basilan
-        </p>
-        <h2 className="mt-5 text-xl md:text-2xl font-black text-slate-800 uppercase tracking-widest">
-          Organizational Structure
-        </h2>
-      </div>
+    <div className="relative min-h-screen py-8 px-0 w-full overflow-x-hidden select-none">
+      {/* Background Image */}
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat scale-105 filter blur-md pointer-events-none"
+        style={{ backgroundImage: "url('/landmark.png')" }}
+      />
+      
+      {/* Dark Overlay */}
+      <div className="fixed inset-0 z-0 bg-black/40 pointer-events-none" />
 
-      <div className="max-w-[1600px] mx-auto">
-        {isEmpty ? (
-          <div className="text-center py-16 bg-white rounded-xl border border-slate-300">
-            <h2 className="text-lg font-bold text-slate-700">
-              No directory entries found.
-            </h2>
+      {/* Main Content Area */}
+      <div className="relative z-10 w-full">
+        {/* Header Block */}
+        <div className="w-full text-center mb-10 px-4">
+          <h1
+            className="text-3xl md:text-5xl font-black text-[#F59E0B] uppercase tracking-wider mb-1"
+            style={{ textShadow: "0 2px 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8)" }}
+          >
+            ORGANIZATIONAL CHART
+          </h1>
+          <h2
+            className="text-xl md:text-2xl font-black text-amber-300 uppercase tracking-wide mb-1"
+            style={{ textShadow: "0 2px 8px rgba(0,0,0,0.9), 0 0 15px rgba(0,0,0,0.8)" }}
+          >
+            Isabela East Central Elementary School
+          </h2>
+          <div className="inline-block bg-slate-900/80 backdrop-blur-md px-4 py-1 rounded-full border border-slate-700/80 shadow-lg">
+            <p className="text-white font-black text-xs md:text-sm tracking-widest uppercase">
+              Teaching and Non-Teaching Staff
+            </p>
           </div>
-        ) : (
-          <div className="space-y-10">
-            {/* 1. Administration Hierarchy */}
-            {(districtSupervisor || sortedAdmin.length > 0 || alsCoordinators.length > 0) && (
-              <section className="flex flex-col items-center">
-                {districtSupervisor && (
-                  <div className="flex flex-col items-center">
-                    <StaffCard
-                      person={districtSupervisor}
-                      positionOverride="Public Schools District Supervisor (PSDS)"
-                      subtitle="East District I"
-                    />
-                    {(principal || leadershipBranchCount > 0) && <ArrowDown height={32} />}
-                  </div>
-                )}
+        </div>
 
-                {principal && (
-                  <div className="flex flex-col items-center">
-                    <StaffCard person={principal} />
-                    {leadershipBranchCount > 0 && <ArrowDown height={32} />}
-                  </div>
-                )}
-
-                {leadershipBranchCount > 0 && (
-                  <div className="flex flex-col items-center">
-                    <BranchConnector
-                      childCount={leadershipBranchCount}
-                      childWidth={CARD_W + 120}
-                      gap={40}
-                    />
-                    <div className="flex items-start gap-10">
-                      {(vicePrincipal || otherAdmin.length > 0) && (
-                        <div className="flex min-w-[280px] flex-col items-center">
-                          {vicePrincipal && <StaffCard person={vicePrincipal} />}
-                          {vicePrincipal && otherAdmin.length > 0 && <ArrowDown height={32} />}
-                          {otherAdmin.length > 0 && (
-                            <>
-                              {otherAdmin.length > 1 && (
-                                <BranchConnector childCount={otherAdmin.length} childWidth={CARD_W} gap={CARD_GAP} />
-                              )}
-                              <div className="flex" style={{ gap: CARD_GAP }}>
-                                {otherAdmin.map((person) => <StaffCard key={person.id} person={person} />)}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )}
-
-                      {primaryAlsCoordinator && (
-                        <div className="flex min-w-[280px] flex-col items-center">
-                          <StaffCard person={primaryAlsCoordinator} />
-                          {supportingAlsCoordinators.length > 0 && <ArrowDown height={32} />}
-                          {supportingAlsCoordinators.length > 1 && (
-                            <BranchConnector childCount={supportingAlsCoordinators.length} childWidth={CARD_W} gap={CARD_GAP} />
-                          )}
-                          <div className="flex" style={{ gap: CARD_GAP }}>
-                            {supportingAlsCoordinators.map((person) => (
-                              <StaffCard key={person.id} person={person} />
-                            ))}
-                          </div>
-                        </div>
-                      )}
+        <div className="w-full">
+          {loading ? (
+            <div className="text-center py-16">
+              <span className="inline-block bg-slate-900/90 text-white font-black text-lg px-6 py-3 rounded-full shadow-2xl animate-pulse border border-slate-700">
+                Loading directory...
+              </span>
+            </div>
+          ) : isEmpty ? (
+            <div className="text-center py-16 bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/20 max-w-4xl mx-auto shadow-2xl">
+              <h2 className="text-lg font-black text-white">
+                No directory entries found.
+              </h2>
+            </div>
+          ) : (
+            <div className="space-y-12 w-full">
+              {/* 1. Administration Hierarchy */}
+              {(districtSupervisor ||
+                sortedAdmin.length > 0 ||
+                alsCoordinators.length > 0) && (
+                <section className="flex flex-col items-center w-full overflow-x-auto py-6 [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-slate-800/60 [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300">
+                  {districtSupervisor && (
+                    <div className="flex flex-col items-center mb-6">
+                      <StaffCard
+                        person={districtSupervisor}
+                        positionOverride="Public Schools District Supervisor (PSDS)"
+                        subtitle="East District I"
+                        onClick={() => setSelectedStaff(districtSupervisor)}
+                      />
                     </div>
-                  </div>
-                )}
-              </section>
-            )}
+                  )}
 
-            {/* 2. Teaching Force */}
-            {teachingStaff.length > 0 && (
-              <section className="w-full pt-6 border-t-2 border-slate-300 pb-3">
-                <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide mb-6">
-                  Teaching Force
-                </h2>
-
-                <div className="w-full overflow-x-auto pb-3">
-                <div className="grid w-max grid-cols-[234px_1718px_234px] gap-5 items-start">
-                  <aside className="bg-white p-4 rounded-xl border border-slate-300">
-                    <h3 className="text-center text-sm font-black uppercase text-[#7B1C1C] mb-4">Alternative Learning System (ALS)</h3>
-                    <div className="flex flex-col items-center gap-3">
-                      {alsTeachers.length > 0 ? alsTeachers.map((person) => (
-                        <StaffCard key={person.id} person={person} />
-                      )) : <p className="text-xs italic text-slate-400">Unassigned</p>}
+                  {principal && (
+                    <div className="flex flex-col items-center mb-6">
+                      <StaffCard
+                        person={principal}
+                        onClick={() => setSelectedStaff(principal)}
+                      />
                     </div>
-                  </aside>
+                  )}
 
-                  <div className="bg-white p-4 rounded-xl border border-slate-300">
-                    <div className="grid grid-cols-[repeat(8,200px)] gap-3">
-                    {GRADE_LEVELS.map((gl) => {
-                      const gradeTeachers = teachingAdvisers.filter(
-                        (t) => t.grade_level === gl
-                      );
-                      const chairman = gradeTeachers.find(
-                        (t) => t.is_grade_chairman
-                      );
-                      const others = gradeTeachers.filter(
-                        (t) => t.id !== chairman?.id
-                      );
-
-                      return (
-                        <div
-                          key={gl}
-                          className="flex min-w-[200px] flex-col items-center border-r last:border-r-0 border-slate-200 px-1"
-                        >
-                          <div className="w-full text-center py-1 px-1 bg-[#7B1C1C] text-white font-black text-[0.7rem] uppercase rounded mb-3 whitespace-nowrap">
-                            {gl === "SPED" ? "SNED" : gl}
-                          </div>
-
-                          <div className="flex flex-col items-center w-full gap-0">
-                            {gradeTeachers.length === 0 && (
-                              <div className="text-[0.65rem] text-slate-400 text-center italic py-4 whitespace-nowrap">
-                                Unassigned
-                              </div>
-                            )}
-
-                            {chairman && (
-                              <div className="flex flex-col items-center">
-                                <StaffCard person={chairman} highlight={true} />
-                              </div>
-                            )}
-
-                            {others.map((person, idx) => (
-                              <div
+                  <div className="flex flex-wrap justify-center items-start gap-10">
+                    {(vicePrincipal || otherAdmin.length > 0) && (
+                      <div className="flex flex-col items-center gap-4">
+                        {vicePrincipal && (
+                          <StaffCard
+                            person={vicePrincipal}
+                            onClick={() => setSelectedStaff(vicePrincipal)}
+                          />
+                        )}
+                        {otherAdmin.length > 0 && (
+                          <div
+                            className="flex flex-wrap justify-center"
+                            style={{ gap: CARD_GAP }}
+                          >
+                            {otherAdmin.map((person) => (
+                              <StaffCard
                                 key={person.id}
-                                className="flex flex-col items-center"
-                              >
-                                {(chairman || idx > 0) && <ArrowDown height={28} />}
-                                <StaffCard person={person} />
-                              </div>
+                                person={person}
+                                onClick={() => setSelectedStaff(person)}
+                              />
                             ))}
                           </div>
-                        </div>
-                      );
-                    })}
-                    </div>
+                        )}
+                      </div>
+                    )}
 
-                    {subjectTeachers.length > 0 && (
-                      <div className="mt-8 pt-5 border-t-2 border-slate-200">
-                        <ArrowDown height={28} />
-                        <h3 className="text-center text-sm font-black uppercase text-slate-700 mb-4">Subject Teachers</h3>
-                        <div className="flex flex-wrap justify-center" style={{ gap: CARD_GAP }}>
-                          {subjectTeachers.map((person) => (
-                            <StaffCard key={person.id} person={person} />
+                    {primaryAlsCoordinator && (
+                      <div className="flex flex-col items-center gap-4">
+                        <StaffCard
+                          person={primaryAlsCoordinator}
+                          onClick={() => setSelectedStaff(primaryAlsCoordinator)}
+                        />
+                        <div
+                          className="flex flex-wrap justify-center"
+                          style={{ gap: CARD_GAP }}
+                        >
+                          {supportingAlsCoordinators.map((person) => (
+                            <StaffCard
+                              key={person.id}
+                              person={person}
+                              onClick={() => setSelectedStaff(person)}
+                            />
                           ))}
                         </div>
                       </div>
                     )}
                   </div>
+                </section>
+              )}
 
-                  <aside className="bg-white p-4 rounded-xl border border-slate-300">
-                    <h3 className="text-center text-sm font-black uppercase text-[#7B1C1C] mb-4">ALIVE</h3>
-                    <div className="flex flex-col items-center gap-3">
-                      {aliveTeachers.length > 0 ? aliveTeachers.map((person) => (
-                        <StaffCard key={person.id} person={person} />
-                      )) : <p className="text-xs italic text-slate-400">Unassigned</p>}
+              {/* 2. Teaching Force */}
+              {teachingStaff.length > 0 && (
+                <section className="w-full pt-8 border-t-2 border-amber-500/50">
+                  <div className="text-center mb-6 px-4">
+                    <span className="inline-block bg-slate-900/90 text-amber-400 border border-amber-500/40 text-lg font-black uppercase tracking-wider px-6 py-1.5 rounded-full shadow-lg">
+                      Teaching Force
+                    </span>
+                  </div>
+
+                  {/* Translucent Glass Container with Visible Scrollbar */}
+                  <div
+                    ref={scrollRef}
+                    className="bg-slate-900/40 backdrop-blur-md p-6 rounded-none border-y-2 border-white/20 w-full overflow-x-auto shadow-2xl cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-slate-800/60 [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300"
+                  >
+                    <div className="flex items-start min-w-[1640px] w-full py-4">
+                      {/* ALS Column */}
+                      <div className="flex flex-col items-center px-3 w-[180px] flex-shrink-0">
+                        <div className="w-full text-center py-1.5 px-1 bg-[#7B1C1C] text-white font-black text-xs uppercase rounded-md mb-3 whitespace-nowrap shadow-md border border-red-500/30">
+                          ALS
+                        </div>
+                        <div className="flex flex-col items-center gap-4">
+                          {alsTeachers.length > 0 ? (
+                            alsTeachers.map((person) => (
+                              <StaffCard
+                                key={person.id}
+                                person={person}
+                                onClick={() => handleCardClick(person)}
+                              />
+                            ))
+                          ) : (
+                            <div className="text-xs font-black text-amber-200/80 text-center italic py-4 whitespace-nowrap drop-shadow">
+                              Unassigned
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 8 Grade Level Columns */}
+                      <div className="grid grid-cols-8 gap-2 flex-grow px-1">
+                        {GRADE_LEVELS.map((gl) => {
+                          const gradeTeachers = teachingAdvisers.filter(
+                            (t) => t.grade_level === gl
+                          );
+                          const chairman = gradeTeachers.find(
+                            (t) => t.is_grade_chairman
+                          );
+                          const others = gradeTeachers.filter(
+                            (t) => t.id !== chairman?.id
+                          );
+
+                          return (
+                            <div
+                              key={gl}
+                              className="flex flex-col items-center px-1"
+                            >
+                              <div className="w-full text-center py-1.5 px-1 bg-[#7B1C1C] text-white font-black text-xs uppercase rounded-md mb-3 whitespace-nowrap shadow-md border border-red-500/30">
+                                {gl}
+                              </div>
+
+                              <div className="flex flex-col items-center w-full gap-4">
+                                {gradeTeachers.length === 0 && (
+                                  <div className="text-xs font-black text-amber-200/80 text-center italic py-4 whitespace-nowrap drop-shadow">
+                                    Unassigned
+                                  </div>
+                                )}
+
+                                {chairman && (
+                                  <StaffCard
+                                    person={chairman}
+                                    highlight={true}
+                                    onClick={() => handleCardClick(chairman)}
+                                  />
+                                )}
+
+                                {others.map((person) => (
+                                  <StaffCard
+                                    key={person.id}
+                                    person={person}
+                                    onClick={() => handleCardClick(person)}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* ALIVE Column */}
+                      <div className="flex flex-col items-center px-3 w-[180px] flex-shrink-0">
+                        <div className="w-full text-center py-1.5 px-1 bg-[#7B1C1C] text-white font-black text-xs uppercase rounded-md mb-3 whitespace-nowrap shadow-md border border-red-500/30">
+                          ALIVE
+                        </div>
+                        <div className="flex flex-col items-center gap-4">
+                          {aliveTeachers.length > 0 ? (
+                            aliveTeachers.map((person) => (
+                              <StaffCard
+                                key={person.id}
+                                person={person}
+                                onClick={() => handleCardClick(person)}
+                              />
+                            ))
+                          ) : (
+                            <div className="text-xs font-black text-amber-200/80 text-center italic py-4 whitespace-nowrap drop-shadow">
+                              Unassigned
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </aside>
-                </div>
-                </div>
-              </section>
-            )}
 
-            {/* 3. Substitute teachers */}
-            {substitutes.length > 0 && (
-              <section className="space-y-4 pt-6 border-t-2 border-slate-300">
-                <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide">
-                  Substitute Teachers
-                </h2>
-                <div className="bg-white p-4 rounded-lg border border-slate-300 shadow-sm">
-                  <div className="flex flex-wrap justify-center" style={{ gap: CARD_GAP }}>
-                    {substitutes.map((person) => (
-                      <StaffCard key={person.id} person={person} />
-                    ))}
+                    {/* Subject Teachers */}
+                    {subjectTeachers.length > 0 && (
+                      <div className="mt-8 pt-6 border-t-2 border-white/20 py-4">
+                        <h3 className="text-center text-sm font-black uppercase text-amber-300 mb-4 tracking-wide drop-shadow">
+                          Subject Teachers
+                        </h3>
+                        <div
+                          className="flex flex-wrap justify-center"
+                          style={{ gap: CARD_GAP }}
+                        >
+                          {subjectTeachers.map((person) => (
+                            <StaffCard
+                              key={person.id}
+                              person={person}
+                              onClick={() => handleCardClick(person)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </section>
-            )}
+                </section>
+              )}
 
-            {otherSupport.length > 0 && (
-              <section className="space-y-4 pt-6 border-t-2 border-slate-300">
-                <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide">Support Staff</h2>
-                <div className="bg-white p-4 rounded-lg border border-slate-300 shadow-sm">
-                  <div className="flex flex-wrap justify-center" style={{ gap: CARD_GAP }}>
-                    {otherSupport.map((person) => <StaffCard key={person.id} person={person} />)}
+              {/* 3. Substitute teachers */}
+              {substitutes.length > 0 && (
+                <section className="space-y-4 pt-8 border-t-2 border-amber-500/50 w-full">
+                  <div className="text-center px-4">
+                    <span className="inline-block bg-slate-900/90 text-amber-400 border border-amber-500/40 text-lg font-black uppercase tracking-wider px-6 py-1.5 rounded-full shadow-lg">
+                      Substitute Teachers
+                    </span>
                   </div>
-                </div>
-              </section>
-            )}
+                  <div className="bg-slate-900/40 backdrop-blur-md p-6 rounded-none border-y-2 border-white/20 shadow-2xl py-6 [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-slate-800/60 [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300">
+                    <div
+                      className="flex flex-wrap justify-center"
+                      style={{ gap: CARD_GAP }}
+                    >
+                      {substitutes.map((person) => (
+                        <StaffCard
+                          key={person.id}
+                          person={person}
+                          onClick={() => handleCardClick(person)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              )}
 
-            {/* 4. Watchmen and utility workers stay at the bottom. */}
-            {watchmenAndUtility.length > 0 && (
-              <section className="space-y-4 pt-6 border-t-2 border-slate-300">
-                <h2 className="text-center text-lg font-black text-slate-800 uppercase tracking-wide">Watchmen &amp; Utility Workers</h2>
-                <div className="bg-white p-4 rounded-lg border border-slate-300 shadow-sm">
-                  <div className="flex flex-wrap justify-center" style={{ gap: CARD_GAP }}>
-                    {watchmenAndUtility.map((person) => <StaffCard key={person.id} person={person} />)}
+              {/* Support Staff */}
+              {otherSupport.length > 0 && (
+                <section className="space-y-4 pt-8 border-t-2 border-amber-500/50 w-full">
+                  <div className="text-center px-4">
+                    <span className="inline-block bg-slate-900/90 text-amber-400 border border-amber-500/40 text-lg font-black uppercase tracking-wider px-6 py-1.5 rounded-full shadow-lg">
+                      Support Staff
+                    </span>
                   </div>
-                </div>
-              </section>
-            )}
-          </div>
-        )}
+                  <div className="bg-slate-900/40 backdrop-blur-md p-6 rounded-none border-y-2 border-white/20 shadow-2xl py-6 [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-slate-800/60 [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300">
+                    <div
+                      className="flex flex-wrap justify-center"
+                      style={{ gap: CARD_GAP }}
+                    >
+                      {otherSupport.map((person) => (
+                        <StaffCard
+                          key={person.id}
+                          person={person}
+                          onClick={() => handleCardClick(person)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* 4. Watchmen & Utility */}
+              {watchmenAndUtility.length > 0 && (
+                <section className="space-y-4 pt-8 border-t-2 border-amber-500/50 w-full">
+                  <div className="text-center px-4">
+                    <span className="inline-block bg-slate-900/90 text-amber-400 border border-amber-500/40 text-lg font-black uppercase tracking-wider px-6 py-1.5 rounded-full shadow-lg">
+                      Watchmen &amp; Utility Workers
+                    </span>
+                  </div>
+                  <div className="bg-slate-900/40 backdrop-blur-md p-6 rounded-none border-y-2 border-white/20 shadow-2xl py-6 [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-slate-800/60 [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300">
+                    <div
+                      className="flex flex-wrap justify-center"
+                      style={{ gap: CARD_GAP }}
+                    >
+                      {watchmenAndUtility.map((person) => (
+                        <StaffCard
+                          key={person.id}
+                          person={person}
+                          onClick={() => handleCardClick(person)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Full-Screen Modal */}
+      {selectedStaff && (
+        <FullScreenModal
+          person={selectedStaff}
+          onClose={() => setSelectedStaff(null)}
+        />
+      )}
     </div>
   );
 }
