@@ -6,7 +6,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
 // ─── 1. Custom Hook for Click-and-Drag Scrolling ─────────────────────────────
 function useDraggable<T extends HTMLElement>() {
@@ -429,10 +429,6 @@ export default function DirectoryPage() {
 
   useEffect(() => {
     async function fetchStaff() {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
       const { data, error } = await supabase
         .from("org_chart")
         .select("*")
