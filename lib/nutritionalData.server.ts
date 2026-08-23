@@ -19,6 +19,7 @@ const GRADE_ORDER = ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grad
 interface BmiRecord {
   sy?: string
   q?: string
+  date?: string
   weight?: number
   height?: number
   status?: string
@@ -49,7 +50,7 @@ function isOfficialBeneficiary(
   for (const label of [bazLabel, hazLabel]) {
     if (!label || !config.criteria?.includes(label)) continue
     const allowedGrades = config.criterionGradeRestrictions?.[label]
-    if (!allowedGrades?.length || allowedGrades.includes(grade)) return true
+    if (allowedGrades === undefined || allowedGrades.includes(grade)) return true
   }
   return false
 }
@@ -67,20 +68,21 @@ function normalizeRecords(value: StudentRow['records']): BmiRecord[] {
   }
 }
 
-function ageInMonths(birthdate?: string, fallbackAge?: number): number | null {
-  if (!birthdate) return fallbackAge ? Math.round(fallbackAge * 12) : null
+function ageInMonths(birthdate?: string, measurementDate?: string): number | null {
+  if (!birthdate || !measurementDate) return null
   const birth = new Date(birthdate)
-  const today = new Date()
-  let months = (today.getFullYear() - birth.getFullYear()) * 12 + today.getMonth() - birth.getMonth()
-  if (today.getDate() < birth.getDate()) months--
+  const measured = new Date(measurementDate)
+  if (Number.isNaN(birth.getTime()) || Number.isNaN(measured.getTime())) return null
+  let months = (measured.getFullYear() - birth.getFullYear()) * 12 + measured.getMonth() - birth.getMonth()
+  if (measured.getDate() < birth.getDate()) months--
   return months >= 0 ? months : null
 }
 
-function computeBAZ(weight: number, height: number, sex?: string, birthdate?: string, fallbackAge?: number): NSCategory | null {
+function computeBAZ(weight: number, height: number, sex?: string, birthdate?: string, measurementDate?: string): NSCategory | null {
   if (!weight || !height || height <= 0) return null
   const heightMeters = height > 3 ? height / 100 : height
   const bmi = weight / (heightMeters * heightMeters)
-  const months = ageInMonths(birthdate, fallbackAge)
+  const months = ageInMonths(birthdate, measurementDate)
   if (months === null) return null
   const row = (sex === 'F' ? BMI_TABLE_GIRLS : BMI_TABLE_BOYS)[Math.max(72, Math.min(228, months))]
   if (!row) return null
@@ -89,13 +91,21 @@ function computeBAZ(weight: number, height: number, sex?: string, birthdate?: st
   if (bmi >= row.n_from && bmi <= row.n_to) return 'N'
   if (bmi >= row.ow_from && bmi <= row.ow_to) return 'OW'
   if (bmi >= row.ob_min) return 'O'
-  return null
+
+  // Keep this fallback aligned with the BMI app. The source tables contain
+  // small boundary gaps for some ages; the app classifies those learners with
+  // these thresholds instead of dropping them from the BMI totals.
+  if (bmi < 14) return 'SW'
+  if (bmi < 16) return 'W'
+  if (bmi < 23) return 'N'
+  if (bmi < 27) return 'OW'
+  return 'O'
 }
 
-function computeHAZ(heightValue: number, sex?: string, birthdate?: string, fallbackAge?: number): HAZCategory | null {
+function computeHAZ(heightValue: number, sex?: string, birthdate?: string, measurementDate?: string): HAZCategory | null {
   if (!heightValue) return null
   const height = heightValue <= 3 ? heightValue * 100 : heightValue
-  const months = ageInMonths(birthdate, fallbackAge)
+  const months = ageInMonths(birthdate, measurementDate)
   if (months === null) return null
   const row = (sex === 'F' ? HAZ_TABLE_GIRLS : HAZ_TABLE_BOYS)[Math.max(36, Math.min(228, months))]
   if (!row) return null
@@ -125,6 +135,9 @@ export async function getNutritionalSummary(
     const { data, error } = await supabase
       .from('students')
       .select('section, age, birthdate, sex, records, previous_sbfp_beneficiary')
+      .eq('school_id', schoolId)
+      .order('name', { ascending: true })
+      .order('id', { ascending: true })
       .range(from, from + pageSize - 1)
 
     if (error) throw new Error(`Unable to load BMI records: ${error.message}`)
@@ -157,17 +170,33 @@ export async function getNutritionalSummary(
       ? 'SNED'
       : GRADE_ORDER.find((item) => section.startsWith(item)) || 'Kinder'
     const bucket = buckets[grade]
-    bucket.total++
-    const record = normalizeRecords(student.records).find((item) =>
+    const matchingRecords = normalizeRecords(student.records).filter((item) =>
       String(item.sy || '').replace(/\D/g, '') === schoolYearDigits
       && aliases[quarter].includes(String(item.q || '').toLowerCase().replace(/[–—]/g, '-').trim()),
     )
+    if (!matchingRecords.length) continue
+    bucket.total++
+    const record = matchingRecords[matchingRecords.length - 1]
+    const beneficiaryRecord = matchingRecords[0]
     const baz = record
-      ? computeBAZ(Number(record.weight), Number(record.height), student.sex, student.birthdate, student.age)
+      ? computeBAZ(Number(record.weight), Number(record.height), student.sex, student.birthdate, record.date)
       : null
-    const haz = record ? computeHAZ(Number(record.height), student.sex, student.birthdate, student.age) : null
-    const bazLabel = baz ? ({ SW: 'Severely Wasted', W: 'Wasted', N: 'Normal', OW: 'Overweight', O: 'Obese' } as const)[baz] : null
-    const hazLabel = haz ? ({ SS: 'Severely Stunted', S: 'Stunted', N: 'Normal', T: 'Tall' } as const)[haz] : null
+    const haz = record ? computeHAZ(Number(record.height), student.sex, student.birthdate, record.date) : null
+    const beneficiaryBaz = computeBAZ(
+      Number(beneficiaryRecord.weight),
+      Number(beneficiaryRecord.height),
+      student.sex,
+      student.birthdate,
+      beneficiaryRecord.date,
+    )
+    const beneficiaryHaz = computeHAZ(
+      Number(beneficiaryRecord.height),
+      student.sex,
+      student.birthdate,
+      beneficiaryRecord.date,
+    )
+    const bazLabel = beneficiaryBaz ? ({ SW: 'Severely Wasted', W: 'Wasted', N: 'Normal', OW: 'Overweight', O: 'Obese' } as const)[beneficiaryBaz] : null
+    const hazLabel = beneficiaryHaz ? ({ SS: 'Severely Stunted', S: 'Stunted', N: 'Normal', T: 'Tall' } as const)[beneficiaryHaz] : null
     if (isOfficialBeneficiary(grade, bazLabel, hazLabel, sbfpConfig)) bucket.sbfpBeneficiaries++
 
     if (!record || (!record.weight && !record.height)) continue
