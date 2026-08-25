@@ -1,39 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { supabase, MOOE_TABLE } from "@/lib/supabase";
-
-interface ExpenseItem {
-  objectCode: string;
-  amount: number;
-}
-
-interface ReceiptItem {
-  url: string;
-  path: string;
-}
-
-interface MooeRecord {
-  id?: string;
-  cy?: string;
-  sy?: string;
-  month: string;
-  allocation: number;
-  total: number;
-  balance: number;
-  items: ExpenseItem[];
-  liquidated_by?: string;
-  liquidatedBy?: string;
-  date_received?: string;
-  date_liquidated?: string;
-  remarks?: string;
-  receipts?: ReceiptItem[];
-}
-
-const MONTHS: string[] = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import {
+  fetchMooeRecords,
+  getCachedMooeRecords,
+  MONTHS,
+  subscribeToMooeRecords,
+  type MooeRecord,
+  type ReceiptItem,
+} from "@/lib/mooeData";
 
 const OBJECT_CODE_MAP: Record<string, string> = {
   "5020101000": "Traveling Expenses - Local",
@@ -107,50 +83,44 @@ const parseCodeAndTitle = (rawObjectCode: string) => {
 };
 
 export default function Page() {
-  const [records, setRecords] = useState<MooeRecord[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [selectedCY, setSelectedCY] = useState<string>("ALL");
+  const initialRecords = getCachedMooeRecords();
+  const [records, setRecords] = useState<MooeRecord[]>(initialRecords ?? []);
+  const [loading, setLoading] = useState<boolean>(!initialRecords);
+  const [selectedCY, setSelectedCY] = useState<string>(initialRecords?.[0]?.cy ?? "ALL");
   const [selectedMonth, setSelectedMonth] = useState<string>("ALL");
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number>(0);
   const [lightboxList, setLightboxList] = useState<ReceiptItem[]>([]);
+  const selectionInitialized = useRef(Boolean(initialRecords?.[0]?.cy));
 
   useEffect(() => {
-    fetchPublicRecords();
-  }, []);
+    let active = true;
 
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (!lightboxUrl) return;
-      if (e.key === "Escape") closeLightbox();
-      if (e.key === "ArrowRight") navigateLightbox(1);
-      if (e.key === "ArrowLeft") navigateLightbox(-1);
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [lightboxUrl, lightboxIndex, lightboxList]);
-
-  const fetchPublicRecords = async () => {
-    setLoading(true);
-    const { data, error } = await supabase.from(MOOE_TABLE).select("*");
-    if (error) {
-      console.error("Error loading public MOOE records:", error);
+    const applyCachedRecords = () => {
+      const cached = getCachedMooeRecords();
+      if (!active || !cached) return;
+      setRecords(cached);
+      if (!selectionInitialized.current) {
+        setSelectedCY(cached[0]?.cy ?? "ALL");
+        selectionInitialized.current = true;
+      }
       setLoading(false);
-      return;
-    }
-    const formattedData: MooeRecord[] = (data || []).map((r: MooeRecord) => ({
-      ...r,
-      cy: r.cy || r.sy || "CY 2026",
-      receipts: r.receipts || [],
-    }));
-    const sorted = formattedData.sort((a, b) => {
-      if (a.cy !== b.cy) return (b.cy || "").localeCompare(a.cy || "");
-      return MONTHS.indexOf(a.month) - MONTHS.indexOf(b.month);
-    });
-    setRecords(sorted);
-    if (sorted.length > 0 && sorted[0].cy) setSelectedCY(sorted[0].cy);
-    setLoading(false);
-  };
+    };
+
+    void fetchMooeRecords()
+      .then(applyCachedRecords)
+      .catch((error: unknown) => {
+        if (!active) return;
+        console.error("Error loading public MOOE records:", error);
+        setLoading(false);
+      });
+
+    const unsubscribe = subscribeToMooeRecords(applyCachedRecords);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
 
   const openLightbox = (receipts: ReceiptItem[], startIndex: number) => {
     setLightboxList(receipts);
@@ -171,6 +141,21 @@ export default function Page() {
     setLightboxUrl(lightboxList[next].url);
   };
 
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (!lightboxUrl) return;
+      if (e.key === "Escape") closeLightbox();
+      const direction = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+      if (!direction) return;
+      const next = lightboxIndex + direction;
+      if (next < 0 || next >= lightboxList.length) return;
+      setLightboxIndex(next);
+      setLightboxUrl(lightboxList[next].url);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [lightboxUrl, lightboxIndex, lightboxList]);
+
   const availableCYs: string[] = Array.from(
     new Set(records.map((r) => r.cy).filter((cy): cy is string => Boolean(cy)))
   ).sort((a, b) => b.localeCompare(a));
@@ -189,7 +174,7 @@ export default function Page() {
     <div className="max-w-7xl mx-auto px-6 py-12 text-gray-900">
       {/* Breadcrumbs */}
       <div className="mb-6 flex items-center gap-2 text-lg text-gray-700 font-semibold">
-        <a href="/" className="hover:text-blue-700 underline">Home</a>
+        <Link href="/" className="hover:text-blue-700 underline">Home</Link>
         <span>/</span>
         <span>MOOE Expenses & Liquidation</span>
       </div>

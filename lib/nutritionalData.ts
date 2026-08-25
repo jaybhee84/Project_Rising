@@ -70,15 +70,69 @@ export function getTotals(data: GradeLevelData[]): Totals {
   )
 }
 
-export async function fetchNutritionalData(schoolYear: string, quarter: string): Promise<NutritionalSummary> {
-  const params = new URLSearchParams({ schoolYear, quarter })
-  const response = await fetch(`/api/nutritional-status?${params.toString()}`, { cache: 'no-store' })
-  const body: unknown = await response.json()
-  if (!response.ok) {
-    const message = body && typeof body === 'object' && 'error' in body
-      ? String(body.error)
-      : 'Unable to load nutritional summary.'
-    throw new Error(message)
-  }
-  return body as NutritionalSummary
+interface NutritionalCacheEntry {
+  data: NutritionalSummary
+  fetchedAt: number
+}
+
+const nutritionalCache = new Map<string, NutritionalCacheEntry>()
+const pendingRequests = new Map<string, Promise<NutritionalSummary>>()
+
+function cacheKey(schoolYear: string, quarter: string) {
+  return `${schoolYear}::${quarter}`
+}
+
+export function getCachedNutritionalData(
+  schoolYear: string,
+  quarter: string,
+): NutritionalSummary | null {
+  return nutritionalCache.get(cacheKey(schoolYear, quarter))?.data ?? null
+}
+
+export function shouldRefreshNutritionalData(
+  schoolYear: string,
+  quarter: string,
+  maxAgeMs = 30_000,
+): boolean {
+  const entry = nutritionalCache.get(cacheKey(schoolYear, quarter))
+  return !entry || Date.now() - entry.fetchedAt > maxAgeMs
+}
+
+export async function fetchNutritionalData(
+  schoolYear: string,
+  quarter: string,
+  force = false,
+): Promise<NutritionalSummary> {
+  const key = cacheKey(schoolYear, quarter)
+  const cached = nutritionalCache.get(key)
+  if (!force && cached) return cached.data
+
+  const pending = pendingRequests.get(key)
+  if (pending) return pending
+
+  const request = (async () => {
+    const params = new URLSearchParams({ schoolYear, quarter })
+    const response = await fetch(`/api/nutritional-status?${params.toString()}`, { cache: 'no-store' })
+    const body: unknown = await response.json()
+    if (!response.ok) {
+      const message = body && typeof body === 'object' && 'error' in body
+        ? String(body.error)
+        : 'Unable to load nutritional summary.'
+      throw new Error(message)
+    }
+
+    const data = body as NutritionalSummary
+    nutritionalCache.set(key, { data, fetchedAt: Date.now() })
+    return data
+  })().finally(() => pendingRequests.delete(key))
+
+  pendingRequests.set(key, request)
+  return request
+}
+
+export function preloadNutritionalData(
+  schoolYear = SCHOOL_YEARS[0],
+  quarter = QUARTERS[0],
+): void {
+  void fetchNutritionalData(schoolYear, quarter).catch(console.error)
 }

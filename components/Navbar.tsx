@@ -4,6 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import { preloadMooeRecords } from '@/lib/mooeData'
+import { preloadNutritionalData } from '@/lib/nutritionalData'
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -17,6 +19,11 @@ export default function Navbar() {
     { name: 'MOOE', href: '/mooe' },
     { name: 'Organizational Chart', href: '/org-chart' },
   ]
+
+  const preloadPageData = (href: string) => {
+    if (href === '/nutritional-status') preloadNutritionalData()
+    if (href === '/mooe') preloadMooeRecords()
+  }
 
   return (
     <header className="bg-[#7B1C1C] text-white shadow-xl sticky top-0 z-50 border-b-2 border-[#F5A623]/40 w-full">
@@ -85,6 +92,9 @@ export default function Navbar() {
               <Link
                 key={link.name}
                 href={link.href}
+                onMouseEnter={() => preloadPageData(link.href)}
+                onFocus={() => preloadPageData(link.href)}
+                onTouchStart={() => preloadPageData(link.href)}
                 className={`px-3 lg:px-4 py-2 rounded-lg transition-all ${
                   isActive
                     ? 'bg-amber-400 text-slate-950 font-black shadow-md'
@@ -123,6 +133,8 @@ export default function Navbar() {
               <Link
                 key={link.name}
                 href={link.href}
+                onTouchStart={() => preloadPageData(link.href)}
+                onFocus={() => preloadPageData(link.href)}
                 onClick={() => setIsOpen(false)}
                 className={`block px-4 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider ${
                   isActive

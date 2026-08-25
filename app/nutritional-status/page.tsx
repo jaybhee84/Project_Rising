@@ -3,10 +3,12 @@
 /* Client-only chart mounting and filter reloads intentionally reset local UI state in effects. */
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useSyncExternalStore } from 'react'
 import Image from 'next/image'
 import {
   fetchNutritionalData,
+  getCachedNutritionalData,
+  shouldRefreshNutritionalData,
   nsColors, nsLabels,
   hazColors, hazLabels,
   getPct, FEEDING_PROGRAM,
@@ -120,19 +122,22 @@ function SelectPill({
 }
 
 export default function NutritionalStatusPage() {
-  const [isMounted, setIsMounted] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const initialData = getCachedNutritionalData(SCHOOL_YEARS[0], QUARTERS[0])
+  const isMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
+  const [loading, setLoading] = useState(!initialData)
   const [error, setError] = useState<string | null>(null)
   const [schoolYear, setSchoolYear] = useState(SCHOOL_YEARS[0])
   const [quarter, setQuarter] = useState(QUARTERS[0])
-  const [rows, setRows] = useState<GradeLevelData[]>([])
-  const [totals, setTotals] = useState<Totals>(EMPTY_TOTALS)
-  const [meta, setMeta] = useState<Meta>(EMPTY_META)
+  const [rows, setRows] = useState<GradeLevelData[]>(initialData?.nutritionalData ?? [])
+  const [totals, setTotals] = useState<Totals>(initialData?.totals ?? EMPTY_TOTALS)
+  const [meta, setMeta] = useState<Meta>(initialData?.meta ?? EMPTY_META)
   const [currentImgIndex, setCurrentImgIndex] = useState(0)
   const [hoveredBazIndex, setHoveredBazIndex] = useState<number | null>(null)
   const [hoveredHazIndex, setHoveredHazIndex] = useState<number | null>(null)
-
-  useEffect(() => { setIsMounted(true) }, [])
 
   // ── Slideshow Timer (Swaps image every 3 seconds) ──
   useEffect(() => {
@@ -144,21 +149,56 @@ export default function NutritionalStatusPage() {
   }, [])
 
   useEffect(() => {
-    setLoading(true)
-    setError(null)
-    fetchNutritionalData(schoolYear, quarter)
+    let active = true
+
+    const load = (force = false) => fetchNutritionalData(schoolYear, quarter, force)
       .then(({ nutritionalData, totals, meta }) => {
+        if (!active) return
         setRows(nutritionalData)
         setTotals(totals)
         setMeta(meta)
+        setError(null)
         setLoading(false)
       })
       .catch((err: unknown) => {
+        if (!active) return
+        if (getCachedNutritionalData(schoolYear, quarter)) {
+          console.error('Unable to refresh nutritional data:', err)
+          return
+        }
         const msg = err instanceof Error ? err.message : String(err)
         setError(msg)
         setLoading(false)
       })
+
+    void load(shouldRefreshNutritionalData(schoolYear, quarter))
+
+    const refreshTimer = window.setInterval(() => { void load(true) }, 60_000)
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible' && shouldRefreshNutritionalData(schoolYear, quarter)) {
+        void load(true)
+      }
+    }
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+
+    return () => {
+      active = false
+      window.clearInterval(refreshTimer)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
   }, [schoolYear, quarter])
+
+  const changeSchoolYear = (value: string) => {
+    setError(null)
+    setLoading(!getCachedNutritionalData(value, quarter))
+    setSchoolYear(value)
+  }
+
+  const changeQuarter = (value: string) => {
+    setError(null)
+    setLoading(!getCachedNutritionalData(schoolYear, value))
+    setQuarter(value)
+  }
 
   const bazPieData = BAZ_CHART_CATS.map((cat) => ({
     name: nsLabels[cat], value: totals[cat], color: nsColors[cat],
@@ -211,8 +251,8 @@ export default function NutritionalStatusPage() {
 
             {/* Dropdowns */}
             <div className="flex flex-wrap gap-4 mb-4">
-              <SelectPill label="School Year" value={schoolYear} options={SCHOOL_YEARS} onChange={setSchoolYear} />
-              <SelectPill label="Period" value={quarter} options={QUARTERS} onChange={setQuarter} />
+              <SelectPill label="School Year" value={schoolYear} options={SCHOOL_YEARS} onChange={changeSchoolYear} />
+              <SelectPill label="Period" value={quarter} options={QUARTERS} onChange={changeQuarter} />
             </div>
 
             <p className="text-rose-100 text-sm opacity-80">
