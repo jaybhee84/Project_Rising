@@ -29,6 +29,18 @@ const CATEGORIES = [
 
 const HERO_IMAGES = ['/media.png', '/media2.png']
 
+function formatArticleDate(article: Article): string {
+  if (article.day && article.month && article.year) {
+    return `${article.day} ${article.month} ${article.year}`
+  }
+  if (article.month && article.year) return `${article.month} ${article.year}`
+  return new Date(article.created_at).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 export default function ActivitiesPage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -119,6 +131,7 @@ export default function ActivitiesPage() {
   const filteredArticles = selectedCategory
     ? articles.filter((item) => item.category === selectedCategory)
     : articles
+  const latestBulletins = articles.slice(0, 3)
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -175,6 +188,59 @@ export default function ActivitiesPage() {
             ))}
           </div>
         </div>
+
+        {/* Latest announcements bulletin */}
+        <section className="mb-10 overflow-hidden rounded-3xl border border-amber-200 bg-[#0A192F] text-white shadow-xl" aria-labelledby="bulletin-heading">
+          <div className="flex flex-col gap-4 border-b border-white/10 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-400 text-2xl text-slate-950 shadow-lg" aria-hidden="true">
+                📣
+              </div>
+              <div>
+                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-300">Latest announcements</span>
+                <h2 id="bulletin-heading" className="mt-0.5 text-2xl font-black">School Bulletin</h2>
+              </div>
+            </div>
+            <button
+              onClick={() => document.getElementById('latest-updates')?.scrollIntoView({ behavior: 'smooth' })}
+              className="self-start rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-black text-white transition hover:bg-white/20 sm:self-auto"
+            >
+              View all updates ↓
+            </button>
+          </div>
+
+          <div className="grid gap-px bg-white/10 md:grid-cols-3">
+            {loading ? (
+              [0, 1, 2].map((item) => (
+                <div key={item} className="bg-[#0A192F] p-6 sm:p-7">
+                  <div className="h-3 w-24 animate-pulse rounded bg-white/20" />
+                  <div className="mt-4 h-6 w-4/5 animate-pulse rounded bg-white/20" />
+                  <div className="mt-3 h-3 w-full animate-pulse rounded bg-white/10" />
+                </div>
+              ))
+            ) : latestBulletins.length === 0 ? (
+              <div className="bg-[#0A192F] px-6 py-10 text-sm text-slate-300 md:col-span-3 sm:px-8">
+                There are no new announcements at this time. Please check back soon.
+              </div>
+            ) : (
+              latestBulletins.map((article, index) => (
+                <article key={article.id} className="group relative bg-[#0A192F] p-6 transition hover:bg-white/[0.06] sm:p-7">
+                  <div className="flex items-center justify-between gap-3 text-[11px] font-bold uppercase tracking-wider">
+                    <span className="text-amber-300">{article.category}</span>
+                    {index === 0 && (
+                      <span className="rounded-full bg-amber-400 px-2 py-1 text-[9px] font-black text-slate-950">Newest</span>
+                    )}
+                  </div>
+                  <h3 className="mt-4 text-lg font-black leading-snug text-white group-hover:text-amber-200">{article.title}</h3>
+                  {article.description && (
+                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate-300">{article.description}</p>
+                  )}
+                  <p className="mt-4 text-xs font-semibold text-slate-400">{formatArticleDate(article)}</p>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
 
         {/* Category Cards Section */}
         <div className="mb-10 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
@@ -242,7 +308,7 @@ export default function ActivitiesPage() {
         </div>
 
         {/* Section Title */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-slate-200">
+        <div id="latest-updates" className="flex scroll-mt-28 flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-slate-200">
           <div>
             <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
               Latest from IECES
@@ -304,16 +370,7 @@ export default function ActivitiesPage() {
               const currentIndex = activeImageIndices[item.id] || 0
               const currentPhoto = photos[currentIndex]
 
-              const dateString =
-                item.day && item.month && item.year
-                  ? `${item.day} ${item.month} ${item.year}`
-                  : item.month && item.year
-                  ? `${item.month} ${item.year}`
-                  : new Date(item.created_at).toLocaleDateString('en-GB', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })
+              const dateString = formatArticleDate(item)
 
               return (
                 <article
