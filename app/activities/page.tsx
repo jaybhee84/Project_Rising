@@ -140,16 +140,16 @@ export default function ActivitiesPage() {
               }}
               className="inline-block text-xs font-black uppercase tracking-widest px-3.5 py-1 rounded-full mb-4 shadow-sm"
             >
-              IECES Campus Updates
+              Official IECES Updates
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight mb-4">
-              School News and Events
+              News &amp; Events
             </h1>
 
             <p className="text-rose-100 text-sm sm:text-base leading-relaxed opacity-90 max-w-2xl">
-              Highlights from student journalism competitions, campus events,
-              sports meets, and community engagement projects at Isabela East
+              Stay informed about school announcements, learner achievements,
+              campus programs, sports, and community events at Isabela East
               Central Elementary School.
             </p>
           </div>
@@ -177,22 +177,28 @@ export default function ActivitiesPage() {
         </div>
 
         {/* Category Cards Section */}
-        <div className="mb-12">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-slate-900">
-              Browse Categories
-            </h2>
-            {selectedCategory && (
-              <button
-                onClick={() => setSelectedCategory(null)}
-                className="text-xs font-bold text-rose-900 hover:underline"
-              >
-                Clear Filter (Show All)
-              </button>
-            )}
+        <div className="mb-10 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex items-center justify-between gap-4 mb-5">
+            <div>
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-rose-800">Find a story</span>
+              <h2 className="mt-1 text-xl font-black text-slate-950">
+                Explore Updates
+              </h2>
+            </div>
+            <button
+              onClick={() => setSelectedCategory(null)}
+              aria-pressed={!selectedCategory}
+              className={`rounded-full px-4 py-2 text-xs font-black transition-all ${
+                selectedCategory
+                  ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  : 'bg-[#7B1C1C] text-white shadow-sm'
+              }`}
+            >
+              All Updates
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {CATEGORIES.map((cat) => {
               const isSelected = selectedCategory === cat.name
               const count = articles.filter((a) => a.category === cat.name).length
@@ -200,24 +206,25 @@ export default function ActivitiesPage() {
               return (
                 <button
                   key={cat.name}
+                  aria-pressed={isSelected}
                   onClick={() =>
                     setSelectedCategory(isSelected ? null : cat.name)
                   }
-                  className={`flex items-center gap-4 p-4 rounded-2xl border text-left transition-all duration-200 ${
+                  className={`flex min-h-32 flex-col items-start justify-between gap-3 rounded-2xl border p-4 text-left transition-all duration-200 ${
                     isSelected
                       ? 'bg-[#7B1C1C] border-[#7B1C1C] text-white shadow-lg'
                       : 'bg-white border-slate-200/80 hover:border-rose-300 hover:bg-rose-50/30 text-slate-800 shadow-sm'
                   }`}
                 >
                   <span
-                    className={`text-3xl p-3 rounded-xl ${
+                    className={`rounded-xl p-2 text-2xl ${
                       isSelected ? 'bg-white/10' : 'bg-slate-100/80'
                     }`}
                   >
                     {cat.icon}
                   </span>
                   <div className="flex flex-col">
-                    <span className="font-bold text-base leading-tight">
+                    <span className="text-sm font-black leading-tight">
                       {cat.name}
                     </span>
                     <span
@@ -238,41 +245,48 @@ export default function ActivitiesPage() {
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-slate-200">
           <div>
             <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-              Campus Updates
+              Latest from IECES
             </span>
             <h2
               className="text-3xl font-black tracking-tight mt-1"
               style={{ color: '#7B1C1C' }}
             >
-              {selectedCategory ? selectedCategory : 'Recent School Highlights'}
+              {selectedCategory ? selectedCategory : 'Latest Updates'}
             </h2>
           </div>
           <p className="text-slate-500 text-xs sm:text-sm mt-2 md:mt-0">
-            Showcasing academic, cultural, and sports achievements across all
-            grade levels.
+            News, announcements, and memorable moments from our school community.
           </p>
         </div>
 
         {/* Error State Notice */}
         {errorMessage && (
-          <div className="p-4 mb-8 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">
-            <p className="font-bold">Database Error:</p>
-            <p>{errorMessage}</p>
-            <p className="text-xs mt-2 text-red-600">
-              Please check your Supabase Row Level Security (RLS) policies or Vercel Environment Variables.
-            </p>
+          <div className="p-5 mb-8 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-sm">
+            <p className="font-black">Updates are temporarily unavailable.</p>
+            <p className="mt-1 text-red-700">Please try again in a few moments.</p>
           </div>
         )}
 
         {/* Content View */}
         {loading ? (
-          <div className="text-center py-20 text-slate-500 font-medium">
-            Loading announcements...
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3" aria-label="Loading news and events">
+            {[0, 1, 2].map((item) => (
+              <div key={item} className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="h-52 animate-pulse rounded-xl bg-slate-200" />
+                <div className="mt-5 h-3 w-24 animate-pulse rounded-full bg-slate-200" />
+                <div className="mt-4 h-6 w-4/5 animate-pulse rounded bg-slate-200" />
+                <div className="mt-3 h-3 w-full animate-pulse rounded bg-slate-100" />
+                <div className="mt-2 h-3 w-2/3 animate-pulse rounded bg-slate-100" />
+              </div>
+            ))}
           </div>
         ) : filteredArticles.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400">
-            No school news or events published in{' '}
-            {selectedCategory || 'this section'} yet.
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-20 text-center">
+            <div className="text-4xl" aria-hidden="true">📰</div>
+            <h3 className="mt-4 text-lg font-black text-slate-800">No updates yet</h3>
+            <p className="mt-2 text-sm text-slate-500">
+              No news or events have been published in {selectedCategory || 'this section'} yet.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
