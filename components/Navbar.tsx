@@ -9,6 +9,7 @@ import { preloadNutritionalData } from '@/lib/nutritionalData'
 import { preloadOrgChart } from '@/lib/orgChartData'
 import { preloadNewsArticles } from '@/lib/newsData'
 import { preloadBulletins } from '@/lib/bulletinData'
+import { preloadEnrollmentData } from '@/lib/enrollmentData'
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -27,6 +28,7 @@ export default function Navbar() {
   const preloadPageData = (href: string) => {
     if (href === '/bulletin') preloadBulletins()
     if (href === '/activities') preloadNewsArticles()
+    if (href === '/enrollment') preloadEnrollmentData()
     if (href === '/nutritional-status') preloadNutritionalData()
     if (href === '/mooe') preloadMooeRecords()
     if (href === '/org-chart') preloadOrgChart()

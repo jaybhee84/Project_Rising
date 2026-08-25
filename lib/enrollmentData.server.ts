@@ -118,14 +118,6 @@ function schoolYearFor(learner: DataRow, current: string): string {
   return normalizeSchoolYear(learner.school_year || learner.schoolYear || learner.sy)
     || schoolYearFromTimestamp(enrollmentTimestamp(learner)) || current
 }
-function readingCategory(learner: DataRow): typeof READING_CATEGORIES[number] {
-  const raw = normalizedText(learner.reading_level || learner.reading_category)
-  if (['FF', 'FE'].includes(raw) || raw.startsWith('FRUSTRATION')) return 'Frustration'
-  if (['IF', 'IE'].includes(raw) || raw.startsWith('INSTRUCTIONAL')) return 'Instructional'
-  if (['INDF', 'INDE'].includes(raw) || raw.startsWith('INDEPENDENT')) return 'Independent'
-  if (raw === 'NA' || raw.includes('NOT YET ASSESSED')) return 'Not Yet Assessed'
-  return 'Non-Reader'
-}
 function personName(person: DataRow): string {
   const parts = [person.first_name, person.middle_name || person.middle_initial, person.family_name || person.last_name]
     .map(text).filter(Boolean)
@@ -224,9 +216,10 @@ export async function getEnrollmentSummary(requestedSchoolYear?: string | null):
     return { ...grade, ...summarize(rows), beneficiaries: rows.filter(isBeneficiary).length }
   })
   const readingGrades = GRADES.filter((grade) => ['1', '2', '3', '4', '5', '6'].includes(grade.key))
+  // Reading assessment data does not have an approved source yet. Keep this
+  // report explicitly empty instead of interpreting enrollment-form values.
   const reading = READING_CATEGORIES.map((category) => {
-    const counts = Object.fromEntries(readingGrades.map((grade) => [grade.key,
-      learners.filter((learner) => learnerGradeKey(learner) === grade.key && readingCategory(learner) === category).length]))
+    const counts = Object.fromEntries(readingGrades.map((grade) => [grade.key, 0]))
     return { category, grades: counts, total: Object.values(counts).reduce((sum, count) => sum + count, 0) }
   })
   const dailyGroups = new Map<string, DataRow[]>()
@@ -247,8 +240,7 @@ export async function getEnrollmentSummary(requestedSchoolYear?: string | null):
     totals: { ...summarize(learners), beneficiaries: learners.filter(isBeneficiary).length,
       enrolledToday: daily.find((row) => row.date === today)?.total || 0 },
     grades, reading,
-    readingGrades: readingGrades.map((grade) => ({ ...grade,
-      total: learners.filter((learner) => learnerGradeKey(learner) === grade.key).length })),
+    readingGrades: readingGrades.map((grade) => ({ ...grade, total: 0 })),
     daily,
     advisers: buildAdvisers(learners, (orgResult.data || []) as DataRow[], (profileResult.data || []) as DataRow[], (portalResult.data || []) as DataRow[]),
     syncedAt: new Date().toISOString(),

@@ -3,9 +3,14 @@
 /* Enrollment data refreshes after selections, focus changes, and a short polling interval. */
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { DailyEnrollment, EnrollmentSummary } from '@/lib/enrollmentData.server'
+import {
+  fetchEnrollmentData,
+  getCachedEnrollmentData,
+  shouldRefreshEnrollmentData,
+  type DailyEnrollment,
+  type EnrollmentSummary,
+} from '@/lib/enrollmentData'
 
 const REFRESH_INTERVAL = 60_000
 
@@ -35,43 +40,57 @@ function EmptyState({ children }: { children: ReactNode }) {
 }
 
 export default function EnrollmentPage() {
-  const [data, setData] = useState<EnrollmentSummary | null>(null)
-  const [selectedSchoolYear, setSelectedSchoolYear] = useState('')
-  const [selectedDate, setSelectedDate] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
+  const cachedEnrollment = getCachedEnrollmentData()
+  const [data, setData] = useState<EnrollmentSummary | null>(cachedEnrollment)
+  const [selectedSchoolYear, setSelectedSchoolYear] = useState(cachedEnrollment?.schoolYear.label || '')
+  const [selectedDate, setSelectedDate] = useState(cachedEnrollment?.daily[0]?.date || '')
+  const [loading, setLoading] = useState(!cachedEnrollment)
   const [error, setError] = useState<string | null>(null)
 
-  const loadEnrollment = useCallback(async (schoolYear?: string, quiet = false) => {
-    if (quiet) setRefreshing(true)
-    else setLoading(true)
+  const loadEnrollment = useCallback(async (schoolYear = '', quiet = false, force = false) => {
+    if (!quiet) setLoading(true)
     try {
-      const query = schoolYear ? `?schoolYear=${encodeURIComponent(schoolYear)}` : ''
-      const response = await fetch(`/api/enrollment${query}`, { cache: 'no-store' })
-      const result = await response.json() as EnrollmentSummary & { error?: string }
-      if (!response.ok) throw new Error(result.error || 'Unable to synchronize enrollment data.')
+      const result = await fetchEnrollmentData(schoolYear, force)
       setData(result)
       setSelectedSchoolYear(result.schoolYear.label)
       setSelectedDate((current) => result.daily.some((row) => row.date === current) ? current : (result.daily[0]?.date || ''))
       setError(null)
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Unable to synchronize enrollment data.')
+      if (getCachedEnrollmentData(schoolYear)) console.error('Unable to refresh enrollment data:', loadError)
+      else setError(loadError instanceof Error ? loadError.message : 'Unable to synchronize enrollment data.')
     } finally {
       setLoading(false)
-      setRefreshing(false)
     }
   }, [])
 
-  useEffect(() => { void loadEnrollment() }, [loadEnrollment])
   useEffect(() => {
-    const timer = window.setInterval(() => void loadEnrollment(selectedSchoolYear, true), REFRESH_INTERVAL)
-    const onFocus = () => void loadEnrollment(selectedSchoolYear, true)
+    const cached = getCachedEnrollmentData()
+    void loadEnrollment(cached?.schoolYear.label || '', Boolean(cached), shouldRefreshEnrollmentData())
+  }, [loadEnrollment])
+  useEffect(() => {
+    const timer = window.setInterval(() => void loadEnrollment(selectedSchoolYear, true, true), REFRESH_INTERVAL)
+    const onFocus = () => {
+      if (shouldRefreshEnrollmentData(selectedSchoolYear)) void loadEnrollment(selectedSchoolYear, true, true)
+    }
     window.addEventListener('focus', onFocus)
     return () => {
       window.clearInterval(timer)
       window.removeEventListener('focus', onFocus)
     }
   }, [loadEnrollment, selectedSchoolYear])
+
+  const changeSchoolYear = (schoolYear: string) => {
+    const cached = getCachedEnrollmentData(schoolYear)
+    setSelectedSchoolYear(schoolYear)
+    setError(null)
+    if (cached) {
+      setData(cached)
+      setSelectedDate(cached.daily[0]?.date || '')
+      void loadEnrollment(schoolYear, true, shouldRefreshEnrollmentData(schoolYear))
+    } else {
+      void loadEnrollment(schoolYear)
+    }
+  }
 
   const selectedDaily = useMemo<DailyEnrollment | undefined>(
     () => data?.daily.find((row) => row.date === selectedDate), [data, selectedDate],
@@ -80,36 +99,40 @@ export default function EnrollmentPage() {
     ...grade, advisers: data.advisers.filter((adviser) => adviser.gradeKey === grade.key),
   })) || [], [data])
 
-  return <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_#f5e7df,_transparent_35%),linear-gradient(#f8fafc,#f1f5f9)] px-4 py-10">
-    <div className="mx-auto max-w-7xl">
-      <div className="mb-7 flex flex-wrap items-end justify-between gap-5">
+  return <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_#f5e7df,_transparent_35%),linear-gradient(#f8fafc,#f1f5f9)]">
+    <section
+      style={{ background: 'linear-gradient(135deg, #7B1C1C 0%, #881337 50%, #4C0D15 100%)' }}
+      className="overflow-hidden px-4 py-10 text-white shadow-md sm:px-6 sm:py-12 lg:px-8"
+    >
+      <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 md:flex-row md:items-center">
         <div>
-          <Link href="/" className="text-sm font-bold text-slate-500 transition-colors hover:text-[#7B1C1C]">&larr; Home</Link>
-          <p className="mt-5 text-xs font-black uppercase tracking-[0.24em] text-[#9b3030]">School ID {data?.schoolId || '126001'}</p>
-          <h1 className="mt-1 text-3xl font-black text-[#5f1717] sm:text-4xl">Learner Enrollment</h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600">Live, privacy-safe summaries synchronized from the IECES Portal and BMI baseline records.</p>
+          <div className="mb-4 inline-block rounded-full bg-amber-500 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-slate-950 shadow-sm">
+            Enrollment Monitoring
+          </div>
+          <h1 className="text-3xl font-black tracking-tight sm:text-4xl md:text-5xl">Learner Enrollment</h1>
+          <p className="mt-3 max-w-2xl text-sm text-rose-100/85">Live, privacy-safe summaries synchronized from the IECES Portal and BMI baseline records.</p>
+          <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-xs font-semibold text-amber-900 shadow-sm">
+            Data shown is aggregated — no individual learner information is displayed
+          </div>
         </div>
-        <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-white/80 bg-white/80 p-3 shadow-sm backdrop-blur">
+        <div className="min-w-52 rounded-2xl border border-white/20 bg-white/10 p-4 shadow-xl backdrop-blur-sm">
           <label className="block">
-            <span className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-500">School year</span>
+            <span className="mb-2 block text-[10px] font-black uppercase tracking-wider text-white/70">School year</span>
             <select value={selectedSchoolYear} disabled={!data || loading}
-              onChange={(event) => { setSelectedSchoolYear(event.target.value); void loadEnrollment(event.target.value) }}
-              className="min-w-40 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-[#7B1C1C]">
+              onChange={(event) => changeSchoolYear(event.target.value)}
+              className="w-full min-w-44 cursor-pointer rounded-full border-0 bg-amber-500 px-4 py-2 text-sm font-black text-slate-950 outline-none disabled:opacity-60">
               {data?.schoolYears.map((year) => <option key={year.label} value={year.label}>{year.label}</option>)}
             </select>
           </label>
-          <button type="button" onClick={() => void loadEnrollment(selectedSchoolYear, true)} disabled={loading || refreshing}
-            className="rounded-xl bg-[#7B1C1C] px-4 py-2 text-sm font-black text-white transition hover:bg-[#641616] disabled:opacity-60">
-            {refreshing ? 'Syncing...' : 'Sync now'}
-          </button>
+          {data && <div className="mt-3 space-y-1 text-[11px] text-rose-100/80">
+            <p>{formatDate(data.schoolYear.startDate)} to {formatDate(data.schoolYear.endDate)}</p>
+            <p>Updated {new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(new Date(data.syncedAt))}</p>
+          </div>}
         </div>
       </div>
+    </section>
 
-      {data && <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-900">
-        <span><strong>SY {data.schoolYear.label}</strong> &middot; {formatDate(data.schoolYear.startDate)} to {formatDate(data.schoolYear.endDate)}</span>
-        <span>Last synced {new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(new Date(data.syncedAt))}</span>
-      </div>}
-
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {loading && !data && <div className="rounded-2xl border bg-white p-14 text-center text-slate-500 shadow-sm">Synchronizing enrollment data...</div>}
       {error && <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800"><strong>Enrollment sync failed.</strong> {error}</div>}
 
@@ -148,7 +171,7 @@ export default function EnrollmentPage() {
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="mb-5"><h2 className="text-xl font-black text-slate-900">Reading Level Assessment</h2><p className="mt-1 text-xs text-slate-500">Phil-IRI classifications for Grades 1 to 6.</p></div>
+          <div className="mb-5"><h2 className="text-xl font-black text-slate-900">Reading Level Assessment</h2><p className="mt-1 text-xs text-slate-500">Awaiting the official assessment source; all values remain at zero for now.</p></div>
           <div className="overflow-x-auto"><table className="w-full min-w-[720px] border-collapse text-sm">
             <thead><tr className="bg-slate-100 text-[11px] uppercase tracking-wide text-slate-600"><th className="border border-slate-200 p-3 text-left">Reading category</th>{data.readingGrades.map((grade) => <th key={grade.key} className="border border-slate-200 p-3 text-center">{grade.label}</th>)}<th className="border border-slate-200 p-3 text-center">Total</th></tr></thead>
             <tbody>{data.reading.map((row) => <tr key={row.category} className="hover:bg-slate-50"><td className="border border-slate-200 p-3 font-bold text-slate-700">{row.category}</td>{data.readingGrades.map((grade) => <td key={grade.key} className="border border-slate-200 p-3 text-center tabular-nums">{row.grades[grade.key]}</td>)}<td className="border border-slate-200 p-3 text-center font-black">{row.total}</td></tr>)}</tbody>
