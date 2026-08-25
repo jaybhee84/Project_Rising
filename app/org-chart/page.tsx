@@ -6,7 +6,12 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import {
+  fetchOrgChart,
+  getCachedOrgChart,
+  subscribeToOrgChart,
+  type StaffMember,
+} from "@/lib/orgChartData";
 
 // ─── 1. Custom Hook for Click-and-Drag Scrolling ─────────────────────────────
 function useDraggable<T extends HTMLElement>() {
@@ -66,24 +71,6 @@ function useDraggable<T extends HTMLElement>() {
 }
 
 // ─── 2. Interfaces & Types ───────────────────────────────────────────────────
-interface StaffMember {
-  id: string;
-  family_name?: string;
-  first_name?: string;
-  middle_name?: string;
-  category: "admin" | "teaching" | "non-teaching" | "job-order";
-  admin_position?: string;
-  teaching_position?: string;
-  teaching_type?: string;
-  is_designated?: boolean;
-  grade_level?: string;
-  is_grade_chairman?: boolean;
-  status: "alive" | "substitute";
-  sub_expiry_start?: string;
-  sub_expiry_end?: string;
-  photo_url?: string;
-}
-
 // ─── 3. Constants ────────────────────────────────────────────────────────────
 const ADMIN_ORDER = [
   "Principal",
@@ -415,8 +402,11 @@ function FullScreenModal({
 
 // ─── 7. Main Page Component ──────────────────────────────────────────────────
 export default function DirectoryPage() {
-  const [allStaff, setAllStaff] = useState<StaffMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialStaff = getCachedOrgChart();
+  const [allStaff, setAllStaff] = useState<StaffMember[]>(
+    () => initialStaff?.filter((person) => !isExpired(person)) ?? [],
+  );
+  const [loading, setLoading] = useState(!initialStaff);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
 
   const { ref: scrollRef, isDraggingRef } = useDraggable<HTMLDivElement>();
@@ -428,18 +418,28 @@ export default function DirectoryPage() {
   };
 
   useEffect(() => {
-    async function fetchStaff() {
-      const { data, error } = await supabase
-        .from("org_chart")
-        .select("*")
-        .order("created_at", { ascending: true });
+    let active = true;
 
-      if (!error && data) {
-        setAllStaff((data as StaffMember[]).filter((p) => !isExpired(p)));
-      }
+    const applyCachedStaff = () => {
+      const cached = getCachedOrgChart();
+      if (!active || !cached) return;
+      setAllStaff(cached.filter((person) => !isExpired(person)));
       setLoading(false);
-    }
-    fetchStaff();
+    };
+
+    void fetchOrgChart()
+      .then(applyCachedStaff)
+      .catch((error: unknown) => {
+        if (!active) return;
+        console.error("Error loading organizational chart:", error);
+        setLoading(false);
+      });
+
+    const unsubscribe = subscribeToOrgChart(applyCachedStaff);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   const substitutes = allStaff.filter((s) => s.status === "substitute");

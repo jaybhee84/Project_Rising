@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { preloadMooeRecords } from '@/lib/mooeData'
 import { preloadNutritionalData } from '@/lib/nutritionalData'
+import { preloadOrgChart } from '@/lib/orgChartData'
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -23,6 +24,7 @@ export default function Navbar() {
   const preloadPageData = (href: string) => {
     if (href === '/nutritional-status') preloadNutritionalData()
     if (href === '/mooe') preloadMooeRecords()
+    if (href === '/org-chart') preloadOrgChart()
   }
 
   return (
