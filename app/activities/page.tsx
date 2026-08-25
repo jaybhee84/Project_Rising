@@ -3,20 +3,13 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { supabase } from '@/lib/supabase'
-
-interface Article {
-  id: string | number
-  author?: string
-  title: string
-  description?: string
-  category: string
-  photos?: string[]
-  day?: string | number
-  month?: string
-  year?: string | number
-  created_at: string
-}
+import {
+  fetchNewsArticles,
+  formatNewsDate,
+  getCachedNewsArticles,
+  subscribeToNewsArticles,
+  type NewsArticle,
+} from '@/lib/newsData'
 
 const CATEGORIES = [
   { name: 'Campus Journalism', icon: '✍️', tag: 'Journalism', bgColor: 'bg-amber-100 text-amber-900', borderColor: 'border-amber-200' },
@@ -29,22 +22,11 @@ const CATEGORIES = [
 
 const HERO_IMAGES = ['/media.png', '/media2.png']
 
-function formatArticleDate(article: Article): string {
-  if (article.day && article.month && article.year) {
-    return `${article.day} ${article.month} ${article.year}`
-  }
-  if (article.month && article.year) return `${article.month} ${article.year}`
-  return new Date(article.created_at).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
 export default function ActivitiesPage() {
-  const [articles, setArticles] = useState<Article[]>([])
+  const initialArticles = getCachedNewsArticles()
+  const [articles, setArticles] = useState<NewsArticle[]>(initialArticles ?? [])
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialArticles)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   // Banner slideshow state
@@ -65,50 +47,30 @@ export default function ActivitiesPage() {
     return () => clearInterval(timer)
   }, [])
 
-  const fetchArticles = async () => {
-    try {
-      setLoading(true)
+  useEffect(() => {
+    let active = true
+
+    const applyCachedArticles = () => {
+      const cached = getCachedNewsArticles()
+      if (!active || !cached) return
+      setArticles(cached)
       setErrorMessage(null)
-
-      const { data, error } = await supabase
-        .from('news_articles')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Supabase Query Error:', error)
-        setErrorMessage(error.message)
-        throw error
-      }
-
-      console.log('Successfully fetched articles from Supabase:', data)
-      setArticles((data as Article[]) || [])
-    } catch (err: unknown) {
-      const errorObj = err as Error
-      console.error('Error in fetchArticles:', errorObj)
-      setErrorMessage(errorObj.message || 'Failed to fetch articles')
-    } finally {
       setLoading(false)
     }
-  }
 
-  useEffect(() => {
-    fetchArticles()
+    void fetchNewsArticles()
+      .then(applyCachedArticles)
+      .catch((error: unknown) => {
+        if (!active) return
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to fetch articles')
+        setLoading(false)
+      })
 
-    const channel = supabase
-      .channel('public:news_articles')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'news_articles' },
-        (payload: Record<string, unknown>) => {
-          console.log('Realtime payload received:', payload)
-          fetchArticles()
-        }
-      )
-      .subscribe()
+    const unsubscribe = subscribeToNewsArticles(applyCachedArticles)
 
     return () => {
-      supabase.removeChannel(channel)
+      active = false
+      unsubscribe()
     }
   }, [])
 
@@ -131,7 +93,6 @@ export default function ActivitiesPage() {
   const filteredArticles = selectedCategory
     ? articles.filter((item) => item.category === selectedCategory)
     : articles
-  const latestBulletins = articles.slice(0, 3)
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -153,17 +114,17 @@ export default function ActivitiesPage() {
               }}
               className="inline-block text-xs font-black uppercase tracking-widest px-3.5 py-1 rounded-full mb-4 shadow-sm"
             >
-              Official IECES Updates
+              Stories from IECES
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight mb-4">
-              News &amp; Events
+              School Gazette
             </h1>
 
             <p className="text-rose-100 text-sm sm:text-base leading-relaxed opacity-90 max-w-2xl">
-              Stay informed about school announcements, learner achievements,
-              campus programs, sports, and community events at Isabela East
-              Central Elementary School.
+              Discover learner achievements, campus journalism, school programs,
+              sports, culture, and community stories from Isabela East Central
+              Elementary School.
             </p>
           </div>
 
@@ -189,66 +150,13 @@ export default function ActivitiesPage() {
           </div>
         </div>
 
-        {/* Latest announcements bulletin */}
-        <section className="mb-10 overflow-hidden rounded-3xl border border-amber-200 bg-[#0A192F] text-white shadow-xl" aria-labelledby="bulletin-heading">
-          <div className="flex flex-col gap-4 border-b border-white/10 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-400 text-2xl text-slate-950 shadow-lg" aria-hidden="true">
-                📣
-              </div>
-              <div>
-                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-300">Latest announcements</span>
-                <h2 id="bulletin-heading" className="mt-0.5 text-2xl font-black">School Bulletin</h2>
-              </div>
-            </div>
-            <button
-              onClick={() => document.getElementById('latest-updates')?.scrollIntoView({ behavior: 'smooth' })}
-              className="self-start rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-black text-white transition hover:bg-white/20 sm:self-auto"
-            >
-              View all updates ↓
-            </button>
-          </div>
-
-          <div className="grid gap-px bg-white/10 md:grid-cols-3">
-            {loading ? (
-              [0, 1, 2].map((item) => (
-                <div key={item} className="bg-[#0A192F] p-6 sm:p-7">
-                  <div className="h-3 w-24 animate-pulse rounded bg-white/20" />
-                  <div className="mt-4 h-6 w-4/5 animate-pulse rounded bg-white/20" />
-                  <div className="mt-3 h-3 w-full animate-pulse rounded bg-white/10" />
-                </div>
-              ))
-            ) : latestBulletins.length === 0 ? (
-              <div className="bg-[#0A192F] px-6 py-10 text-sm text-slate-300 md:col-span-3 sm:px-8">
-                There are no new announcements at this time. Please check back soon.
-              </div>
-            ) : (
-              latestBulletins.map((article, index) => (
-                <article key={article.id} className="group relative bg-[#0A192F] p-6 transition hover:bg-white/[0.06] sm:p-7">
-                  <div className="flex items-center justify-between gap-3 text-[11px] font-bold uppercase tracking-wider">
-                    <span className="text-amber-300">{article.category}</span>
-                    {index === 0 && (
-                      <span className="rounded-full bg-amber-400 px-2 py-1 text-[9px] font-black text-slate-950">Newest</span>
-                    )}
-                  </div>
-                  <h3 className="mt-4 text-lg font-black leading-snug text-white group-hover:text-amber-200">{article.title}</h3>
-                  {article.description && (
-                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate-300">{article.description}</p>
-                  )}
-                  <p className="mt-4 text-xs font-semibold text-slate-400">{formatArticleDate(article)}</p>
-                </article>
-              ))
-            )}
-          </div>
-        </section>
-
         {/* Category Cards Section */}
         <div className="mb-10 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex items-center justify-between gap-4 mb-5">
             <div>
               <span className="text-xs font-black uppercase tracking-[0.18em] text-rose-800">Find a story</span>
               <h2 className="mt-1 text-xl font-black text-slate-950">
-                Explore Updates
+                Explore the Gazette
               </h2>
             </div>
             <button
@@ -370,7 +278,7 @@ export default function ActivitiesPage() {
               const currentIndex = activeImageIndices[item.id] || 0
               const currentPhoto = photos[currentIndex]
 
-              const dateString = formatArticleDate(item)
+              const dateString = formatNewsDate(item)
 
               return (
                 <article

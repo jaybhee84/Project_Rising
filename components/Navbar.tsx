@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import { preloadMooeRecords } from '@/lib/mooeData'
 import { preloadNutritionalData } from '@/lib/nutritionalData'
 import { preloadOrgChart } from '@/lib/orgChartData'
+import { preloadNewsArticles } from '@/lib/newsData'
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -14,7 +15,8 @@ export default function Navbar() {
 
   const navLinks = [
     { name: 'Home', href: '/' },
-    { name: 'News & Events', href: '/activities' },
+    { name: 'Bulletin', href: '/bulletin' },
+    { name: 'School Gazette', href: '/activities' },
     { name: 'Enrollment', href: '/enrollment' },
     { name: 'Nutritional Status', href: '/nutritional-status' },
     { name: 'MOOE', href: '/mooe' },
@@ -22,6 +24,7 @@ export default function Navbar() {
   ]
 
   const preloadPageData = (href: string) => {
+    if (href === '/bulletin' || href === '/activities') preloadNewsArticles()
     if (href === '/nutritional-status') preloadNutritionalData()
     if (href === '/mooe') preloadMooeRecords()
     if (href === '/org-chart') preloadOrgChart()

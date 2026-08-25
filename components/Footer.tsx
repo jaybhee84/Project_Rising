@@ -23,7 +23,8 @@ export default function Footer() {
             <ul className="text-rose-100 text-sm space-y-1">
               <li><a href="/enrolpage" className="hover:text-white transition-colors">Enrollment Data</a></li>
               <li><a href="/nspage" className="hover:text-white transition-colors">Nutritional Status</a></li>
-              <li><a href="/activities" className="hover:text-white transition-colors">News &amp; Events</a></li>
+              <li><a href="/bulletin" className="hover:text-white transition-colors">Bulletin</a></li>
+              <li><a href="/activities" className="hover:text-white transition-colors">School Gazette</a></li>
               <li><a href="/mooepage" className="hover:text-white transition-colors">MOOE Report</a></li>
               <li><a href="/orgchartpage" className="hover:text-white transition-colors">Directory</a></li>
             </ul>
