@@ -24,7 +24,7 @@ export default function Navbar() {
   ]
 
   const preloadPageData = (href: string) => {
-    if (href === '/bulletin' || href === '/activities') preloadNewsArticles()
+    if (href === '/activities') preloadNewsArticles()
     if (href === '/nutritional-status') preloadNutritionalData()
     if (href === '/mooe') preloadMooeRecords()
     if (href === '/org-chart') preloadOrgChart()
