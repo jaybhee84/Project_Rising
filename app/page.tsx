@@ -3,6 +3,12 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import {
+  fetchOrgChart,
+  getCachedOrgChart,
+  subscribeToOrgChart,
+  type StaffMember,
+} from '@/lib/orgChartData'
 
 const LANDMARK_IMAGES = [
   { src: '/landmark.png', alt: 'Isabela East Central Elementary School Landmark' },
@@ -11,8 +17,50 @@ const LANDMARK_IMAGES = [
   { src: '/s3.jpg', alt: 'IECES Campus Feature 3' },
 ]
 
+const FALLBACK_PRINCIPAL: StaffMember = {
+  id: 'homepage-principal-fallback',
+  first_name: 'Jocelyn',
+  middle_name: 'R.',
+  family_name: 'Buenaventura, Ed.D.',
+  category: 'admin',
+  admin_position: 'Principal I',
+  status: 'alive',
+  photo_url: '/principal.png',
+}
+
+function findPrincipal(staff: StaffMember[]): StaffMember | undefined {
+  return staff.find((person) => {
+    const position = person.admin_position?.toLowerCase() ?? ''
+    return person.category === 'admin'
+      && person.status !== 'substitute'
+      && position.includes('principal')
+      && !position.includes('asst')
+      && !position.includes('assistant')
+      && !position.includes('designated')
+  })
+}
+
+function formatPrincipalName(person: StaffMember): string {
+  const rawName = [person.first_name, person.middle_name, person.family_name]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+
+  if (!rawName) return 'School Principal'
+  if (rawName !== rawName.toUpperCase()) return rawName
+
+  return rawName
+    .toLocaleLowerCase('en-PH')
+    .replace(/(^|[\s-])([a-z])/g, (_, separator: string, letter: string) => `${separator}${letter.toUpperCase()}`)
+    .replace(/Ed\.\s*D\./g, 'Ed.D.')
+}
+
 export default function HomePage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [principal, setPrincipal] = useState<StaffMember>(() => {
+    const cachedStaff = getCachedOrgChart()
+    return (cachedStaff && findPrincipal(cachedStaff)) || FALLBACK_PRINCIPAL
+  })
 
   useEffect(() => {
     if (LANDMARK_IMAGES.length <= 1) return
@@ -23,6 +71,26 @@ export default function HomePage() {
 
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    let active = true
+
+    const applyPrincipal = () => {
+      const cachedStaff = getCachedOrgChart()
+      const currentPrincipal = cachedStaff && findPrincipal(cachedStaff)
+      if (active && currentPrincipal) setPrincipal(currentPrincipal)
+    }
+
+    void fetchOrgChart().then(applyPrincipal).catch(console.error)
+    const unsubscribe = subscribeToOrgChart(applyPrincipal)
+
+    return () => {
+      active = false
+      unsubscribe()
+    }
+  }, [])
+
+  const principalName = formatPrincipalName(principal)
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -99,20 +167,20 @@ export default function HomePage() {
             <div className="flex-shrink-0 w-full sm:w-72 lg:w-64">
               <div className="p-5 rounded-2xl bg-black/20 sm:bg-white/10 border border-white/25 shadow-2xl flex flex-col items-center text-center w-full">
                 <div className="relative w-36 h-36 sm:w-44 sm:h-44 mb-3 rounded-full overflow-hidden border-4 border-amber-400 shadow-xl">
-                  <Image 
-                    src="/principal.png" 
-                    alt="Jocelyn R. Buenaventura, EdD" 
-                    fill
-                    className="object-cover object-top"
-                    priority
+                  {/* The Org Chart stores public Supabase photo URLs, so this mirrors its dynamic image rendering. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={principal.photo_url || '/principal.png'}
+                    alt={principalName}
+                    className="h-full w-full object-cover object-top"
                   />
                 </div>
 
                 <h3 className="text-xs sm:text-sm lg:text-base font-bold text-amber-300 leading-snug whitespace-nowrap">
-                  Jocelyn R. Buenaventura, Ed.D.
+                  {principalName}
                 </h3>
                 <span className="text-[10px] sm:text-[11px] text-slate-200 mt-0.5 font-semibold tracking-wider uppercase">
-                  Principal I
+                  {principal.admin_position || 'Principal'}
                 </span>
               </div>
             </div>
