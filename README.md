@@ -80,7 +80,15 @@ gh repo create ieces-website --public --push
 |--------------------|----------------|------------------------------------|
 | Home / About       | Done           | Mission, vision, module cards      |
 | Nutritional Status | Done (mock)    | Wire to Supabase when schema ready |
-| Enrollment         | Placeholder    | Build after Enrollment App         |
+| Enrollment         | Done           | Live, school-year-aware summaries  |
 | Org Chart          | Placeholder    | Static data or Supabase table      |
 | MOOE               | Placeholder    | Upload reports or link PDFs        |
 | Teachers App       | Placeholder    | NS viewer + ID Generator           |
+
+---
+
+## Enrollment synchronization
+
+The public enrollment page reads privacy-safe aggregates from the shared IECES Supabase project through a server-only API. Configure either `ENROLLMENT_SUPABASE_SERVICE_ROLE_KEY` or the existing `BMI_SUPABASE_SERVICE_ROLE_KEY`; the key is never sent to the browser. Optional overrides are `ENROLLMENT_SUPABASE_URL` and `ENROLLMENT_SCHOOL_ID`.
+
+New portal records use `students.school_year`. Dated legacy rows are assigned to a school year using the June 1 to May 31 boundary, while undated legacy rows are included in the current school year so they remain visible.

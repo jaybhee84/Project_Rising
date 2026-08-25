@@ -103,6 +103,17 @@ export default function BulletinPage() {
                 <h2 className="mt-5 text-2xl font-black leading-tight text-slate-950">{announcement.title}</h2>
                 {announcement.summary && <p className="mt-3 text-base font-semibold leading-relaxed text-slate-600">{announcement.summary}</p>}
                 {announcement.body && <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600">{announcement.body}</p>}
+                {announcement.attachment_url && (
+                  <a
+                    href={announcement.attachment_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-5 inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-black text-red-900 transition hover:border-red-300 hover:bg-red-100"
+                  >
+                    <span aria-hidden="true">📎</span>
+                    {announcement.attachment_name || 'View attachment'}
+                  </a>
+                )}
               </article>
             ))}
           </section>

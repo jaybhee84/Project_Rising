@@ -9,6 +9,8 @@ export interface BulletinAnnouncement {
   is_published: boolean
   published_at?: string
   expires_at?: string
+  attachment_url?: string
+  attachment_name?: string
   created_at: string
 }
 

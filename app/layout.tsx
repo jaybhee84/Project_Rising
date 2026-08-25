@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import UrgentBulletinAlert from '@/components/UrgentBulletinAlert'
 
 export const metadata: Metadata = {
   title: 'Isabela East Central Elementary School',
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="min-h-screen flex flex-col">
         <Navbar />
+        <UrgentBulletinAlert />
         <main className="flex-1">
           {children}
         </main>
