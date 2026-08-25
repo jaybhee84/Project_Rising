@@ -24,6 +24,7 @@ export interface DailyEnrollment extends EnrollmentCount {
 export interface AdviserSummary extends EnrollmentCount {
   id: string
   name: string
+  photoUrl: string
   gradeKey: string
   gradeLabel: string
   section: string

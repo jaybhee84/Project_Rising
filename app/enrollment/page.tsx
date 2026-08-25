@@ -39,6 +39,10 @@ function EmptyState({ children }: { children: ReactNode }) {
   return <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">{children}</div>
 }
 
+function initials(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
+}
+
 export default function EnrollmentPage() {
   const cachedEnrollment = getCachedEnrollmentData()
   const [data, setData] = useState<EnrollmentSummary | null>(cachedEnrollment)
@@ -162,7 +166,14 @@ export default function EnrollmentPage() {
               <div className="flex items-center justify-between bg-[#7B1C1C] px-4 py-3 text-white"><h3 className="text-sm font-black">{group.label}</h3><span className="text-xs font-bold text-white/75">{group.total} learners</span></div>
               <div className="divide-y divide-slate-100">
                 {group.advisers.length === 0 ? <p className="p-4 text-xs italic text-slate-400">No adviser assigned</p> : group.advisers.map((adviser) => <div key={adviser.id} className="p-4">
-                  <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-black text-slate-800">{adviser.name}</p>{adviser.section && <p className="mt-0.5 text-[11px] text-slate-500">Section {adviser.section}</p>}{adviser.isChairman && <span className="mt-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-black uppercase text-amber-800">Grade chairman</span>}</div><strong className="text-xl text-[#7B1C1C]">{adviser.total}</strong></div>
+                  <div className="flex items-start gap-3">
+                    {adviser.photoUrl ? (
+                      // Adviser photos are public Supabase URLs managed by the organizational chart.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={adviser.photoUrl} alt={`${adviser.name} profile`} className="h-11 w-11 flex-none rounded-full border-2 border-amber-300 object-cover object-top shadow-sm" loading="lazy" />
+                    ) : <div aria-hidden="true" className="grid h-11 w-11 flex-none place-items-center rounded-full bg-[#7B1C1C] text-xs font-black text-white">{initials(adviser.name)}</div>}
+                    <div className="min-w-0 flex-1"><p className="text-sm font-black text-slate-800">{adviser.name}</p>{adviser.section && <p className="mt-0.5 text-[11px] text-slate-500">Section {adviser.section}</p>}{adviser.isChairman && <span className="mt-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-black uppercase text-amber-800">Grade chairman</span>}</div><strong className="text-xl text-[#7B1C1C]">{adviser.total}</strong>
+                  </div>
                   <p className="mt-2 text-[10px] font-semibold text-slate-500">{adviser.male} Male &middot; {adviser.female} Female</p>
                 </div>)}
               </div>

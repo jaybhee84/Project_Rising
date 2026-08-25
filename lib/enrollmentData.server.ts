@@ -24,7 +24,7 @@ export interface GradeEnrollment extends EnrollmentCount { key: string; label: s
 export interface ReadingAssessment { category: string; grades: Record<string, number>; total: number }
 export interface DailyEnrollment extends EnrollmentCount { date: string; grades: GradeEnrollment[] }
 export interface AdviserSummary extends EnrollmentCount {
-  id: string; name: string; gradeKey: string; gradeLabel: string; section: string; isChairman: boolean
+  id: string; name: string; photoUrl: string; gradeKey: string; gradeLabel: string; section: string; isChairman: boolean
 }
 export interface SchoolYearOption { label: string; startDate: string; endDate: string }
 export interface EnrollmentSummary {
@@ -182,6 +182,7 @@ function buildAdvisers(learners: DataRow[], orgRows: DataRow[], profiles: DataRo
     return {
       id: text(adviser.id) || `adviser-${index}`,
       name: adviserName,
+      photoUrl: text(adviser.photo_url || adviser.photo),
       gradeKey: adviserGrade,
       gradeLabel: GRADES.find((grade) => grade.key === adviserGrade)?.label || text(adviser.grade_level_assigned),
       section: text(adviser.section_assigned),
