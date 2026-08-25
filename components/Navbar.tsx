@@ -14,7 +14,7 @@ export default function Navbar() {
 
   const navLinks = [
     { name: 'Home', href: '/' },
-    { name: 'Activities', href: '/activities' },
+    { name: 'School News and Events', href: '/activities' },
     { name: 'Enrollment', href: '/enrollment' },
     { name: 'Nutritional Status', href: '/nutritional-status' },
     { name: 'MOOE', href: '/mooe' },

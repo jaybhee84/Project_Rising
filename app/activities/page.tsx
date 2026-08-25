@@ -140,11 +140,11 @@ export default function ActivitiesPage() {
               }}
               className="inline-block text-xs font-black uppercase tracking-widest px-3.5 py-1 rounded-full mb-4 shadow-sm"
             >
-              School Announcements & Events
+              IECES Campus Updates
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight mb-4">
-              News, Activities & Campus Journalism
+              School News and Events
             </h1>
 
             <p className="text-rose-100 text-sm sm:text-base leading-relaxed opacity-90 max-w-2xl">
@@ -271,7 +271,7 @@ export default function ActivitiesPage() {
           </div>
         ) : filteredArticles.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400">
-            No articles or activities published in{' '}
+            No school news or events published in{' '}
             {selectedCategory || 'this section'} yet.
           </div>
         ) : (
