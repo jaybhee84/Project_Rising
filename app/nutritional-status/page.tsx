@@ -1,8 +1,5 @@
 'use client'
 
-/* Client-only chart mounting and filter reloads intentionally reset local UI state in effects. */
-/* eslint-disable react-hooks/set-state-in-effect */
-
 import { useState, useEffect, useSyncExternalStore } from 'react'
 import Image from 'next/image'
 import {
