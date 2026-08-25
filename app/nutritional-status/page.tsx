@@ -436,17 +436,20 @@ export default function NutritionalStatusPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr style={{ backgroundColor: '#7B1C1C' }} className="text-white">
-                      <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider">Grade</th>
-                      <th className="text-center px-3 py-3 text-xs font-bold uppercase tracking-wider">Total</th>
+                    <tr className="bg-[#5C1313] text-white">
+                      <th rowSpan={2} className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Grade</th>
+                      <th rowSpan={2} className="px-3 py-3 text-center text-xs font-bold uppercase tracking-wider">Total</th>
+                      <th colSpan={5} className="border-x border-white/20 bg-[#8F1D2C] px-3 py-2 text-center text-xs font-black uppercase tracking-[0.14em]">BMI-for-Age Status</th>
+                      <th rowSpan={2} className="px-3 py-3 text-center text-xs font-bold uppercase tracking-wider">SBFP</th>
+                      <th colSpan={4} className="border-l border-white/20 bg-emerald-900 px-3 py-2 text-center text-xs font-black uppercase tracking-[0.14em]">Height-for-Age Status (HFA)</th>
+                    </tr>
+                    <tr className="bg-[#7B1C1C] text-white">
                       {NS_CATS.map((c) => (
-                        <th key={c} className="text-center px-3 py-3 text-xs font-bold uppercase tracking-wider">{c}</th>
+                        <th key={c} className="border-t border-white/15 px-3 py-2.5 text-center text-xs font-bold uppercase tracking-wider">{c}</th>
                       ))}
-                      <th className="text-center px-3 py-3 text-xs font-bold uppercase tracking-wider">SBFP</th>
-                      <th className="text-center px-3 py-3 text-xs font-bold uppercase tracking-wider border-l border-red-900">SS</th>
-                      <th className="text-center px-3 py-3 text-xs font-bold uppercase tracking-wider">Stunted</th>
-                      <th className="text-center px-3 py-3 text-xs font-bold uppercase tracking-wider">HN</th>
-                      <th className="text-center px-3 py-3 text-xs font-bold uppercase tracking-wider">Tall</th>
+                      {(['SS', 'S', 'N', 'T'] as HAZCategory[]).map((cat) => (
+                        <th key={cat} className="border-l border-t border-white/15 bg-emerald-800 px-3 py-2.5 text-center text-xs font-bold uppercase tracking-wider">{cat}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -496,21 +499,30 @@ export default function NutritionalStatusPage() {
                   </tbody>
                 </table>
               </div>
-              {/* Legend */}
-              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex flex-wrap gap-4">
-                {NS_CATS.map((cat) => (
-                  <div key={cat} className="flex items-center gap-1.5 text-xs text-slate-600">
-                    <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: nsColors[cat] }} />
-                    <span className="font-bold">{cat}</span> — {nsLabels[cat]}
+              {/* Separate legends prevent duplicate status codes from being confused. */}
+              <div className="grid gap-3 border-t border-slate-200 bg-slate-50/70 px-6 py-5 lg:grid-cols-2">
+                <section className="rounded-xl border border-rose-200 bg-white p-4" aria-label="BMI-for-Age status legend">
+                  <h4 className="mb-3 text-[11px] font-black uppercase tracking-[0.14em] text-[#7B1C1C]">BMI-for-Age Status</h4>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2">
+                    {NS_CATS.map((cat) => (
+                      <div key={cat} className="flex items-center gap-1.5 text-xs text-slate-600">
+                        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: nsColors[cat] }} />
+                        <span className="font-bold">{cat}</span> — {nsLabels[cat]}
+                      </div>
+                    ))}
                   </div>
-                ))}
-                <span className="text-slate-300">|</span>
-                {(['SS', 'S', 'N', 'T'] as HAZCategory[]).map((cat) => (
-                  <div key={cat} className="flex items-center gap-1.5 text-xs text-slate-600">
-                    <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: hazColors[cat] }} />
-                    <span className="font-bold">{cat}</span> — {hazLabels[cat]}
+                </section>
+                <section className="rounded-xl border border-emerald-200 bg-white p-4" aria-label="Height-for-Age status legend">
+                  <h4 className="mb-3 text-[11px] font-black uppercase tracking-[0.14em] text-emerald-800">Height-for-Age Status (HFA)</h4>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2">
+                    {(['SS', 'S', 'N', 'T'] as HAZCategory[]).map((cat) => (
+                      <div key={cat} className="flex items-center gap-1.5 text-xs text-slate-600">
+                        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: hazColors[cat] }} />
+                        <span className="font-bold">{cat}</span> — {hazLabels[cat]}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </section>
               </div>
             </div>
 
