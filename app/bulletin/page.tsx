@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import {
   fetchBulletins,
   getCachedBulletins,
+  isImageAttachment,
   subscribeToBulletins,
   type BulletinAnnouncement,
 } from '@/lib/bulletinData'
@@ -103,7 +105,22 @@ export default function BulletinPage() {
                 <h2 className="mt-5 text-2xl font-black leading-tight text-slate-950">{announcement.title}</h2>
                 {announcement.summary && <p className="mt-3 text-base font-semibold leading-relaxed text-slate-600">{announcement.summary}</p>}
                 {announcement.body && <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600">{announcement.body}</p>}
-                {announcement.attachment_url && (
+                {announcement.attachment_url && isImageAttachment(announcement.attachment_name, announcement.attachment_url) ? (
+                  <a
+                    href={announcement.attachment_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="relative mt-5 block h-64 w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100"
+                  >
+                    <Image
+                      src={announcement.attachment_url}
+                      alt={announcement.attachment_name || announcement.title}
+                      fill
+                      sizes="(min-width: 768px) 50vw, 100vw"
+                      className="object-cover"
+                    />
+                  </a>
+                ) : announcement.attachment_url && (
                   <a
                     href={announcement.attachment_url}
                     target="_blank"
