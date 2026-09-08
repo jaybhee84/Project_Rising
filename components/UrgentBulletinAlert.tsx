@@ -64,13 +64,14 @@ export default function UrgentBulletinAlert() {
           {announcement.summary && <p className="text-base font-bold leading-relaxed text-slate-800">{announcement.summary}</p>}
           {announcement.body && <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600">{announcement.body}</p>}
           {announcement.attachment_url && isImageAttachment(announcement.attachment_name, announcement.attachment_url) ? (
-            <a href={announcement.attachment_url} target="_blank" rel="noopener noreferrer" className="relative mt-5 block h-56 w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+            <a href={announcement.attachment_url} target="_blank" rel="noopener noreferrer" className="relative mt-5 block w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
               <Image
                 src={announcement.attachment_url}
                 alt={announcement.attachment_name || announcement.title}
-                fill
+                width={1200}
+                height={800}
                 sizes="(min-width: 640px) 42rem, 100vw"
-                className="object-cover"
+                className="h-auto w-full object-contain"
               />
             </a>
           ) : announcement.attachment_url && (

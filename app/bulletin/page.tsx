@@ -110,14 +110,15 @@ export default function BulletinPage() {
                     href={announcement.attachment_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="relative mt-5 block h-64 w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100"
+                    className="relative mt-5 block w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100"
                   >
                     <Image
                       src={announcement.attachment_url}
                       alt={announcement.attachment_name || announcement.title}
-                      fill
+                      width={1200}
+                      height={800}
                       sizes="(min-width: 768px) 50vw, 100vw"
-                      className="object-cover"
+                      className="h-auto w-full object-contain"
                     />
                   </a>
                 ) : announcement.attachment_url && (
