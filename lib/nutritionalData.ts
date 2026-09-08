@@ -1,12 +1,22 @@
 export const FEEDING_PROGRAM = 'School-Based Feeding Program (SBFP)'
-const currentYear = new Date().getFullYear()
-const currentMonth = new Date().getMonth() + 1
-const currentSchoolYearStart = currentMonth >= 6 ? currentYear : currentYear - 1
 
-export const SCHOOL_YEARS = Array.from({ length: 4 }, (_, offset) => {
-  const start = currentSchoolYearStart + offset
-  return `${start}–${start + 1}`
-})
+function currentSchoolYearStart(now = new Date()): number {
+  const year = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', year: 'numeric' }).format(now))
+  const month = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', month: 'numeric' }).format(now))
+  return month >= 6 ? year : year - 1
+}
+
+// Computed fresh on every call (not a module-level constant) so the list keeps
+// tracking the real current school year on a long-running server process,
+// instead of freezing at whatever year it was when the server last started.
+export function getSchoolYears(): string[] {
+  const currentStart = currentSchoolYearStart()
+  return Array.from({ length: 5 }, (_, offset) => {
+    const start = currentStart - offset
+    return `${start}–${start + 1}`
+  })
+}
+
 export const QUARTERS = ['Baseline', 'Midline', 'Endline']
 
 export type NSCategory = 'SW' | 'W' | 'N' | 'OW' | 'O'
@@ -131,7 +141,7 @@ export async function fetchNutritionalData(
 }
 
 export function preloadNutritionalData(
-  schoolYear = SCHOOL_YEARS[0],
+  schoolYear = getSchoolYears()[0],
   quarter = QUARTERS[0],
 ): void {
   void fetchNutritionalData(schoolYear, quarter).catch(console.error)

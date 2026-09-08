@@ -1,14 +1,15 @@
 import { getNutritionalSummary } from '@/lib/nutritionalData.server'
-import { QUARTERS, SCHOOL_YEARS } from '@/lib/nutritionalData'
+import { QUARTERS, getSchoolYears } from '@/lib/nutritionalData'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams
-  const schoolYear = params.get('schoolYear') || SCHOOL_YEARS[0]
+  const schoolYears = getSchoolYears()
+  const schoolYear = params.get('schoolYear') || schoolYears[0]
   const quarter = params.get('quarter') || QUARTERS[0]
 
-  if (!SCHOOL_YEARS.includes(schoolYear) || !QUARTERS.includes(quarter)) {
+  if (!schoolYears.includes(schoolYear) || !QUARTERS.includes(quarter)) {
     return Response.json({ error: 'Invalid school year or period.' }, { status: 400 })
   }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useSyncExternalStore } from 'react'
+import { useState, useEffect, useMemo, useSyncExternalStore } from 'react'
 import Image from 'next/image'
 import {
   fetchNutritionalData,
@@ -9,7 +9,7 @@ import {
   nsColors, nsLabels,
   hazColors, hazLabels,
   getPct, FEEDING_PROGRAM,
-  SCHOOL_YEARS, QUARTERS,
+  getSchoolYears, QUARTERS,
   type NSCategory, type HAZCategory,
   type GradeLevelData, type Totals, type Meta,
 } from '@/lib/nutritionalData'
@@ -119,6 +119,7 @@ function SelectPill({
 }
 
 export default function NutritionalStatusPage() {
+  const SCHOOL_YEARS = useMemo(() => getSchoolYears(), [])
   const initialData = getCachedNutritionalData(SCHOOL_YEARS[0], QUARTERS[0])
   const isMounted = useSyncExternalStore(
     () => () => {},
