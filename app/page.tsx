@@ -9,13 +9,30 @@ import {
   subscribeToOrgChart,
   type StaffMember,
 } from '@/lib/orgChartData'
+import {
+  fetchHomepageSlides,
+  getCachedHomepageSlides,
+  subscribeToHomepageSlides,
+  type HomepageSlide,
+} from '@/lib/homepageSlides'
 
-const LANDMARK_IMAGES = [
-  { src: '/landmark.png', alt: 'Isabela East Central Elementary School Landmark' },
+// The welcome banner is the fixed default homepage photo — it always shows
+// first and is not managed from the admin portal's Homepage tab.
+const DEFAULT_LANDMARK_IMAGE = { src: '/landmark.png', alt: 'Isabela East Central Elementary School Landmark' }
+
+// Shown only until the admin portal has at least one uploaded homepage photo.
+const FALLBACK_LANDMARK_IMAGES = [
   { src: '/s1.jpg', alt: 'IECES Campus Feature 1' },
   { src: '/s2.jpg', alt: 'IECES Campus Feature 2' },
   { src: '/s3.jpg', alt: 'IECES Campus Feature 3' },
 ]
+
+function buildLandmarkImages(slides: HomepageSlide[] | null) {
+  const extra = slides && slides.length > 0
+    ? slides.map((slide) => ({ src: slide.image_url, alt: 'IECES Campus Photo' }))
+    : FALLBACK_LANDMARK_IMAGES
+  return [DEFAULT_LANDMARK_IMAGE, ...extra]
+}
 
 const FALLBACK_PRINCIPAL: StaffMember = {
   id: 'homepage-principal-fallback',
@@ -57,19 +74,40 @@ function formatPrincipalName(person: StaffMember): string {
 
 export default function HomePage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [landmarkImages, setLandmarkImages] = useState(() => buildLandmarkImages(getCachedHomepageSlides()))
   const [principal, setPrincipal] = useState<StaffMember>(() => {
     const cachedStaff = getCachedOrgChart()
     return (cachedStaff && findPrincipal(cachedStaff)) || FALLBACK_PRINCIPAL
   })
 
   useEffect(() => {
-    if (LANDMARK_IMAGES.length <= 1) return
+    if (landmarkImages.length <= 1) return
 
     const interval = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % LANDMARK_IMAGES.length)
+      setCurrentImageIndex((prev) => (prev + 1) % landmarkImages.length)
     }, 5000)
 
     return () => clearInterval(interval)
+  }, [landmarkImages.length])
+
+  useEffect(() => {
+    setCurrentImageIndex((prev) => (prev >= landmarkImages.length ? 0 : prev))
+  }, [landmarkImages.length])
+
+  useEffect(() => {
+    let active = true
+
+    const applySlides = () => {
+      if (active) setLandmarkImages(buildLandmarkImages(getCachedHomepageSlides()))
+    }
+
+    void fetchHomepageSlides().then(applySlides).catch(console.error)
+    const unsubscribe = subscribeToHomepageSlides(applySlides)
+
+    return () => {
+      active = false
+      unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
@@ -121,7 +159,7 @@ export default function HomePage() {
           }}
         >
           <div className="relative w-full h-full">
-            {LANDMARK_IMAGES.map((image, index) => (
+            {landmarkImages.map((image, index) => (
               <div
                 key={image.src}
                 className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
@@ -134,15 +172,16 @@ export default function HomePage() {
                   fill
                   className="object-cover object-center brightness-90"
                   priority={index === 0}
+                  unoptimized={image.src.startsWith('http')}
                 />
               </div>
             ))}
 
             <div className="absolute inset-0 bg-gradient-to-r from-[#5C1313] via-transparent to-black/30 z-10" />
 
-            {LANDMARK_IMAGES.length > 1 && (
+            {landmarkImages.length > 1 && (
               <div className="absolute bottom-4 right-8 z-20 flex gap-2">
-                {LANDMARK_IMAGES.map((_, idx) => (
+                {landmarkImages.map((_, idx) => (
                   <button
                     key={idx}
                     onClick={() => setCurrentImageIndex(idx)}
@@ -216,7 +255,7 @@ export default function HomePage() {
 
         {/* Mobile Slideshow Banner (Below 1024px) */}
         <div className="mt-8 lg:hidden relative w-full h-56 sm:h-72 overflow-hidden border-t-2 border-amber-400/30">
-          {LANDMARK_IMAGES.map((image, index) => (
+          {landmarkImages.map((image, index) => (
             <div
               key={image.src}
               className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
@@ -228,6 +267,7 @@ export default function HomePage() {
                 alt={image.alt}
                 fill
                 className="object-cover object-center brightness-90"
+                unoptimized={image.src.startsWith('http')}
               />
             </div>
           ))}
