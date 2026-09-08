@@ -5,6 +5,8 @@ export interface HomepageSlide {
   image_url: string
   storage_path?: string
   sort_order?: number
+  focal_x?: number
+  focal_y?: number
   created_at: string
 }
 
