@@ -20,17 +20,25 @@ import {
 // first and is not managed from the admin portal's Homepage tab.
 const DEFAULT_LANDMARK_IMAGE = { src: '/landmark.png', alt: 'Isabela East Central Elementary School Landmark' }
 
-// Shown only until the admin portal has at least one uploaded homepage photo.
+// Fills any remaining slots (up to MAX_SLIDES) when fewer than MAX_SLIDES
+// photos have been uploaded from the admin portal.
 const FALLBACK_LANDMARK_IMAGES = [
   { src: '/s1.jpg', alt: 'IECES Campus Feature 1' },
   { src: '/s2.jpg', alt: 'IECES Campus Feature 2' },
   { src: '/s3.jpg', alt: 'IECES Campus Feature 3' },
 ]
 
+// Excludes the default welcome banner, which is always shown in addition to this.
+const MAX_SLIDES = 10
+
 function buildLandmarkImages(slides: HomepageSlide[] | null) {
-  const extra = slides && slides.length > 0
-    ? slides.map((slide) => ({ src: slide.image_url, alt: 'IECES Campus Photo' }))
-    : FALLBACK_LANDMARK_IMAGES
+  const uploaded = (slides || [])
+    .slice(0, MAX_SLIDES)
+    .map((slide) => ({ src: slide.image_url, alt: 'IECES Campus Photo' }))
+  const needed = MAX_SLIDES - uploaded.length
+  const extra = needed > 0
+    ? [...uploaded, ...FALLBACK_LANDMARK_IMAGES.slice(0, needed)]
+    : uploaded
   return [DEFAULT_LANDMARK_IMAGE, ...extra]
 }
 
