@@ -7,6 +7,7 @@ export interface HomepageSlide {
   sort_order?: number
   focal_x?: number
   focal_y?: number
+  zoom?: number
   created_at: string
 }
 

@@ -18,14 +18,14 @@ import {
 
 // The welcome banner is the fixed default homepage photo — it always shows
 // first and is not managed from the admin portal's Homepage tab.
-const DEFAULT_LANDMARK_IMAGE = { src: '/landmark.png', alt: 'Isabela East Central Elementary School Landmark', focalX: 50, focalY: 50 }
+const DEFAULT_LANDMARK_IMAGE = { src: '/landmark.png', alt: 'Isabela East Central Elementary School Landmark', focalX: 50, focalY: 50, zoom: 1 }
 
 // Fills any remaining slots (up to MAX_SLIDES) when fewer than MAX_SLIDES
 // photos have been uploaded from the admin portal.
 const FALLBACK_LANDMARK_IMAGES = [
-  { src: '/s1.jpg', alt: 'IECES Campus Feature 1', focalX: 50, focalY: 50 },
-  { src: '/s2.jpg', alt: 'IECES Campus Feature 2', focalX: 50, focalY: 50 },
-  { src: '/s3.jpg', alt: 'IECES Campus Feature 3', focalX: 50, focalY: 50 },
+  { src: '/s1.jpg', alt: 'IECES Campus Feature 1', focalX: 50, focalY: 50, zoom: 1 },
+  { src: '/s2.jpg', alt: 'IECES Campus Feature 2', focalX: 50, focalY: 50, zoom: 1 },
+  { src: '/s3.jpg', alt: 'IECES Campus Feature 3', focalX: 50, focalY: 50, zoom: 1 },
 ]
 
 // Excludes the default welcome banner, which is always shown in addition to this.
@@ -39,6 +39,7 @@ function buildLandmarkImages(slides: HomepageSlide[] | null) {
       alt: 'IECES Campus Photo',
       focalX: slide.focal_x ?? 50,
       focalY: slide.focal_y ?? 50,
+      zoom: slide.zoom ?? 1,
     }))
   const needed = MAX_SLIDES - uploaded.length
   const extra = needed > 0
@@ -184,7 +185,7 @@ export default function HomePage() {
                   alt={image.alt}
                   fill
                   className="object-cover brightness-90"
-                  style={{ objectPosition: `${image.focalX}% ${image.focalY}%` }}
+                  style={{ objectPosition: `${image.focalX}% ${image.focalY}%`, transform: `scale(${image.zoom})` }}
                   priority={index === 0}
                   unoptimized={image.src.startsWith('http')}
                 />
@@ -281,7 +282,7 @@ export default function HomePage() {
                 alt={image.alt}
                 fill
                 className="object-cover brightness-90"
-                style={{ objectPosition: `${image.focalX}% ${image.focalY}%` }}
+                style={{ objectPosition: `${image.focalX}% ${image.focalY}%`, transform: `scale(${image.zoom})` }}
                 unoptimized={image.src.startsWith('http')}
               />
             </div>
