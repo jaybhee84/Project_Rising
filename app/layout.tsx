@@ -3,6 +3,7 @@ import './globals.css'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import UrgentBulletinAlert from '@/components/UrgentBulletinAlert'
+import HymnPlayer from '@/components/HymnPlayer'
 
 export const metadata: Metadata = {
   title: 'Isabela East Central Elementary School',
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen flex flex-col">
         <Navbar />
         <UrgentBulletinAlert />
+        <HymnPlayer />
         <main className="flex-1">
           {children}
         </main>
