@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import HymnPlayer from '@/components/HymnPlayer'
 import {
   fetchOrgChart,
   getCachedOrgChart,
@@ -146,7 +147,8 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      
+      <HymnPlayer />
+
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-[#5C1313] text-white py-8 sm:py-12 lg:py-16 border-b-4 border-[#F5A623]">
         
